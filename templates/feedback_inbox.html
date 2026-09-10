@@ -59,6 +59,7 @@
                 <h1>💬 MindWatch Feedback Inbox</h1>
                 <p>Everything users have submitted, newest first.</p>
             </div>
+            <button id="logoutBtn" type="button" style="margin:0;background:#e3e9f1;color:#24303e;" onclick="goLogout()">Logout</button>
         </header>
 
         <div class="box">
@@ -84,7 +85,6 @@
 
         function loadInbox() {
 
-            const statusEl = document.getElementById("status");
             const tokenEl = document.getElementById("adminToken");
             const statusBox = document.getElementById("status");
 
@@ -94,19 +94,35 @@
             let token = (tokenEl.value || "").trim();
             if (!token) token = sessionStorage.getItem(savedKey) || "";
 
-            fetch("/api/all-feedback", {
-                headers: { "X-Admin-Token": token }
-            })
+            const headers = {};
+            if (token) headers["X-Admin-Token"] = token;
+
+            fetch("/api/all-feedback", { headers: headers })
             .then(function (r) { return r.json(); })
             .then(function (data) {
 
                 if (!data.success) {
-                    statusBox.className = "status err";
-                    statusBox.textContent = "✖ " + data.message;
-                    return;
+
+                    // If a logged-in developer session works, ignore this.
+                    if (!token) {
+                        return fetch("/api/all-feedback")
+                            .then(function (r2) { return r2.json(); })
+                            .then(function (d2) {
+                                if (d2.success) return d2;
+                                throw new Error(d2.message || "No access.");
+                            });
+                    }
+
+                    throw new Error(data.message || "No access.");
+
                 }
 
-                sessionStorage.setItem(savedKey, token);
+                return data;
+
+            })
+            .then(function (data) {
+
+                if (token) sessionStorage.setItem(savedKey, token);
                 statusBox.textContent = "";
 
                 const list = data.feedback || [];
@@ -135,12 +151,17 @@
                 document.getElementById("rows").innerHTML = rows;
 
             })
-            .catch(function () {
+            .catch(function (error) {
 
                 statusBox.className = "status err";
-                statusBox.textContent = "✖ Could not reach the server.";
+                statusBox.textContent = "✖ " +
+                    (error && error.message ? error.message : "Could not reach the server.");
 
             });
+        }
+
+        function goLogout() {
+            window.location.href = "/logout";
         }
 
         function escapeHtml(value) {

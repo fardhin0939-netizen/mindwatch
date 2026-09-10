@@ -77,6 +77,15 @@ app.secret_key = os.environ.get("MINDWATCH_SECRET_KEY", "mindwatch-secret-key")
 # Token a developer uses to open the feedback inbox
 ADMIN_TOKEN = os.environ.get("MINDWATCH_ADMIN_TOKEN", "")
 
+# Email of the developer account. When that account logs in, the app
+# sends it straight to the feedback inbox instead of the dashboard.
+ADMIN_EMAIL = (os.environ.get("MINDWATCH_ADMIN_EMAIL") or "").strip().lower()
+
+
+def is_admin_user():
+    email = (session.get("user_email") or "").strip().lower()
+    return bool(ADMIN_EMAIL) and email == ADMIN_EMAIL
+
 # Secure session cookie settings
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
@@ -258,7 +267,10 @@ def login():
                 # Generate CSRF token for this session
                 get_csrf_token()
 
-                # Open dashboard
+                # Open dashboard (or the feedback inbox for the developer)
+                if is_admin_user():
+                    return redirect(url_for("feedback_inbox_page"))
+
                 return redirect(url_for("dashboard"))
 
             else:
@@ -466,6 +478,9 @@ def dashboard():
 
     if "user_id" not in session:
         return redirect(url_for("login"))
+
+    if is_admin_user():
+        return redirect(url_for("feedback_inbox_page"))
 
     user_id = session["user_id"]
 
@@ -1891,8 +1906,10 @@ def feedback_inbox_page():
 def all_feedback():
 
     header_token = request.headers.get("X-Admin-Token", "")
+    session_ok = is_admin_user()
+    token_ok = bool(ADMIN_TOKEN) and header_token == ADMIN_TOKEN
 
-    if not ADMIN_TOKEN or header_token != ADMIN_TOKEN:
+    if not (session_ok or token_ok):
         return jsonify({
             "success": False,
             "message": "Wrong developer token."
