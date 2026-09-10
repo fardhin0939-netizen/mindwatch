@@ -74,6 +74,9 @@ def service_worker():
 # Secret key for login sessions (prefer environment variable)
 app.secret_key = os.environ.get("MINDWATCH_SECRET_KEY", "mindwatch-secret-key")
 
+# Token a developer uses to open the feedback inbox
+ADMIN_TOKEN = os.environ.get("MINDWATCH_ADMIN_TOKEN", "")
+
 # Secure session cookie settings
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
@@ -1859,6 +1862,67 @@ LIMIT 20
 """
 
         cursor.execute(sql, (session["user_id"],))
+        items = cursor.fetchall()
+
+        cursor.close()
+        connection.close()
+
+        return jsonify({
+            "success": True,
+            "feedback": items
+        })
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
+
+
+# =========================
+# DEVELOPER FEEDBACK INBOX
+# =========================
+@app.route("/feedback-inbox")
+def feedback_inbox_page():
+    return render_template("feedback_inbox.html")
+
+
+@app.route("/api/all-feedback", methods=["GET"])
+def all_feedback():
+
+    if "user_id" not in session:
+        return jsonify({
+            "success": False,
+            "message": "Login required."
+        }), 401
+
+    header_token = request.headers.get("X-Admin-Token", "")
+
+    if not ADMIN_TOKEN or header_token != ADMIN_TOKEN:
+        return jsonify({
+            "success": False,
+            "message": "Wrong developer token."
+        }), 403
+
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+
+        sql = """
+SELECT
+    f.id,
+    u.name AS user_name,
+    u.email AS user_email,
+    f.rating,
+    f.message,
+    DATE_FORMAT(f.created_at, '%d %b %Y, %I:%M:%S %p') AS created_at
+FROM feedback f
+JOIN users u ON u.id = f.user_id
+ORDER BY f.created_at DESC
+LIMIT 200
+"""
+
+        cursor.execute(sql)
         items = cursor.fetchall()
 
         cursor.close()
