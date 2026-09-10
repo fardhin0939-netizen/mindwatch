@@ -7661,7 +7661,12 @@ function openFeedbackModal() {
     const modal =
         document.getElementById("feedbackModal");
 
-    if (modal) modal.classList.add("open");
+    if (!modal) {
+        alert("Feedback form is missing.");
+        return;
+    }
+
+    modal.style.display = "flex";
 
     const stars = document.querySelectorAll(
         "#fbStars .fb-star"
@@ -7689,7 +7694,7 @@ function closeFeedbackModal() {
     const modal =
         document.getElementById("feedbackModal");
 
-    if (modal) modal.classList.remove("open");
+    if (modal) modal.style.display = "none";
 
 }
 
