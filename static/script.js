@@ -7790,11 +7790,18 @@ async function submitFeedback() {
 
     try {
 
+        const meta = document.querySelector(
+            'meta[name="csrf-token"]'
+        );
+        const token = meta
+            ? meta.getAttribute("content")
+            : "";
+
         const response = await fetch("/api/feedback", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "X-CSRFToken": csrfToken()
+                "X-CSRFToken": token
             },
             body: JSON.stringify({
                 rating: feedbackRating,
