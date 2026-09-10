@@ -1781,6 +1781,101 @@ def my_professional_messages():
         }), 500
 
 
+# =========================
+# FEEDBACK
+# =========================
+@app.route("/api/feedback", methods=["POST"])
+def save_feedback():
+
+    if "user_id" not in session:
+        return jsonify({
+            "success": False,
+            "message": "Login required."
+        }), 401
+
+    try:
+        data = request.get_json(silent=True) or {}
+        rating = int(data.get("rating") or 0)
+        message = (data.get("message") or "").strip()
+
+        if rating < 1 or rating > 5:
+            return jsonify({
+                "success": False,
+                "message": "Please choose a rating between 1 and 5."
+            }), 400
+
+        if not message:
+            return jsonify({
+                "success": False,
+                "message": "Please write a short feedback message."
+            }), 400
+
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        cursor.execute(
+            "INSERT INTO feedback (user_id, rating, message) "
+            "VALUES (%s, %s, %s)",
+            (session["user_id"], rating, message)
+        )
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+        return jsonify({
+            "success": True,
+            "message": "Thank you! Your feedback has been saved."
+        })
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
+
+
+@app.route("/api/my-feedback", methods=["GET"])
+def my_feedback():
+
+    if "user_id" not in session:
+        return jsonify({
+            "success": False,
+            "message": "Login required."
+        }), 401
+
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+
+        sql = """
+SELECT
+    id,
+    rating,
+    message,
+    DATE_FORMAT(created_at, '%d %b %Y, %I:%M:%S %p') AS created_at
+FROM feedback
+WHERE user_id = %s
+ORDER BY created_at DESC
+LIMIT 20
+"""
+
+        cursor.execute(sql, (session["user_id"],))
+        items = cursor.fetchall()
+
+        cursor.close()
+        connection.close()
+
+        return jsonify({
+            "success": True,
+            "feedback": items
+        })
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
+
+
 @app.route("/ai-support", methods=["POST"])
 def ai_support():
 

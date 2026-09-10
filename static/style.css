@@ -2906,3 +2906,11 @@ html[data-theme="dark"] [style*="background:#f7f9fc" i]{background:var(--surface
 html[data-theme="dark"] .hr-advice[data-level="ok"]{background:#10271c;border-color:#2f5c3e;color:#9ad6b0}
 html[data-theme="dark"] .hr-advice[data-level="low"]{background:#2a2412;border-color:#5a4a1e;color:#e8d9a8}
 html[data-theme="dark"] .hr-advice[data-level="high"]{background:#2b1418;border-color:#5b2730;color:#e8b4b4}
+
+/* ===== Feedback ===== */
+.fb-stars{display:flex;gap:6px;justify-content:center;margin:12px 0;font-size:20px}
+.fb-star{background:none;border:none;font-size:32px;line-height:1;color:#c9ced8;cursor:pointer;padding:4px;transition:transform .15s,color .15s}
+.fb-star:hover{transform:scale(1.18)}
+.fb-star.active{color:#f5a623}
+html[data-theme="dark"] .fb-star{color:#4a4f5c}
+html[data-theme="dark"] .fb-star.active{color:#f7b733}

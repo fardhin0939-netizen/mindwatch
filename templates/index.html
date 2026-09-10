@@ -8,7 +8,7 @@
   <script>try{var _t=localStorage.getItem('mw-theme');if(_t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
   <script>window.__latestAssessment = {{ assessment|tojson|safe }};</script>
   <script>window.APP_VAPID_PUBLIC_KEY = {{ vapid_public_key|tojson }};</script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=202609100017">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=202609100018">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
@@ -1032,6 +1032,22 @@
 
         </div>
 
+        <div class="support-card"><h3>💬 Send Feedback</h3>
+
+            <p>
+                Tell us how MindWatch is helping you or what could be
+                better. Your feedback stays in your account and helps
+                improve the app.
+            </p>
+
+            <button
+                type="button"
+                class="outline-btn"
+                onclick="openFeedbackModal()">✍️ Send Feedback
+            </button>
+
+        </div>
+
     </div>
 
     <!-- MY MESSAGES -->
@@ -1046,6 +1062,21 @@
 
         <div id="myMessages" class="pro-msg-list">
             <div class="pro-loading">Loading your messages...</div>
+        </div>
+    </div>
+
+    <!-- MY FEEDBACK -->
+    <div class="card" style="margin-top:24px;"><div class="card-head"><div><h3>📝 My Feedback</h3>
+
+                <p>
+                    Everything you've shared with the MindWatch team,
+                    so you can see your suggestions and history.
+                </p>
+            </div>
+        </div>
+
+        <div id="myFeedback" class="pro-msg-list">
+            <div class="pro-loading">Loading your feedback...</div>
         </div>
     </div>
 
@@ -1399,6 +1430,42 @@
     </div>
 </div>
 
+<!-- FEEDBACK MODAL -->
+
+<div id="feedbackModal" class="modal"><div class="modal-card"><h2>💬 Send Feedback</h2>
+        <p>
+            Rate your experience (1 = poor, 5 = great) and tell us what
+            we could improve.
+        </p>
+
+        <div class="fb-stars" id="fbStars"
+                role="radiogroup"
+                aria-label="Rating">
+            <button type="button" class="fb-star" data-value="1"
+                    aria-label="1 star">★</button>
+            <button type="button" class="fb-star" data-value="2"
+                    aria-label="2 stars">★</button>
+            <button type="button" class="fb-star" data-value="3"
+                    aria-label="3 stars">★</button>
+            <button type="button" class="fb-star" data-value="4"
+                    aria-label="4 stars">★</button>
+            <button type="button" class="fb-star" data-value="5"
+                    aria-label="5 stars">★</button>
+        </div>
+
+        <label>Your feedback</label>
+        <textarea id="fbMessage" placeholder="e.g. The reminders help a lot, but I'd love a sleep tracker..." style="height:110px"></textarea>
+
+        <div class="modal-actions"><button type="button" class="btn outline-btn"
+                    onclick="closeFeedbackModal()">Cancel</button>
+            <button type="button" class="btn primary"
+                    onclick="submitFeedback()">Submit Feedback</button>
+        </div>
+
+        <p id="fbStatus" style="margin:12px 0 0;font-size:13px;min-height:18px;"></p>
+    </div>
+</div>
+
   <div id="logoutModal" class="modal"><div class="modal-card"><h2>Logout from MindWatch?</h2>
         <p>Are you sure you want to end your session?</p>
         <div class="modal-actions"><button type="button" id="cancelLogout" class="btn outline-btn">Cancel</button>
@@ -1408,7 +1475,7 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="{{ url_for('static', filename='script.js') }}?v=202609100017"></script>
+<script src="{{ url_for('static', filename='script.js') }}?v=202609100018"></script>
 
   <div id="reportDocument" class="report-document">
     <div class="report-header">

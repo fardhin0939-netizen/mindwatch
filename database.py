@@ -265,6 +265,18 @@ def init_db():
         """
     )
 
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS feedback (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INT NOT NULL,
+            rating INT NOT NULL,
+            message TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+
     _ensure_assessment_columns(connection)
     _ensure_message_columns(connection)
     _ensure_usage_columns(connection)

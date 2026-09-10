@@ -135,6 +135,7 @@ function showPage(pageId) {
     if (pageId === "support") {
         renderDailyTips();
         loadMyProfessionalMessages();
+        loadMyFeedback();
     }
 
     refreshSection(pageId);
@@ -7648,6 +7649,241 @@ window.closeProfessionalMessageModal =
 
 window.sendProfessionalMessage =
     sendProfessionalMessage;
+
+
+let feedbackRating = 0;
+
+
+function openFeedbackModal() {
+
+    feedbackRating = 0;
+
+    const modal =
+        document.getElementById("feedbackModal");
+
+    if (modal) modal.classList.add("open");
+
+    const stars = document.querySelectorAll(
+        "#fbStars .fb-star"
+    );
+
+    stars.forEach(function (s) {
+        s.classList.remove("active");
+        s.textContent = "☆";
+    });
+
+    const area = document.getElementById("fbMessage");
+    if (area) area.value = "";
+
+    const status = document.getElementById("fbStatus");
+    if (status) {
+        status.textContent = "";
+        status.style.color = "";
+    }
+
+}
+
+
+function closeFeedbackModal() {
+
+    const modal =
+        document.getElementById("feedbackModal");
+
+    if (modal) modal.classList.remove("open");
+
+}
+
+
+function setFeedbackRating(value) {
+
+    feedbackRating = value;
+
+    const stars = document.querySelectorAll(
+        "#fbStars .fb-star"
+    );
+
+    stars.forEach(function (s) {
+
+        const on = Number(s.getAttribute("data-value")) <= value;
+
+        s.classList.toggle("active", on);
+        s.textContent = on ? "★" : "☆";
+
+    });
+
+}
+
+
+function initFeedbackModal() {
+
+    const stars = document.querySelectorAll(
+        "#fbStars .fb-star"
+    );
+
+    stars.forEach(function (s) {
+
+        s.setAttribute("type", "button");
+
+        s.addEventListener("click", function () {
+
+            setFeedbackRating(
+                Number(s.getAttribute("data-value"))
+            );
+
+        });
+
+    });
+
+}
+
+
+if (document.readyState === "loading") {
+
+    document.addEventListener(
+        "DOMContentLoaded", initFeedbackModal
+    );
+
+} else {
+
+    initFeedbackModal();
+
+}
+
+
+async function submitFeedback() {
+
+    const message = document.getElementById("fbMessage");
+    const statusEl = document.getElementById("fbStatus");
+
+    if (statusEl) {
+        statusEl.textContent = "";
+        statusEl.style.color = "";
+    }
+
+    if (feedbackRating < 1) {
+
+        if (statusEl) {
+            statusEl.textContent = "❌ Please pick a rating first.";
+            statusEl.style.color = "#c03939";
+        }
+        return;
+
+    }
+
+    const text = (message ? message.value : "").trim();
+
+    if (!text) {
+
+        if (statusEl) {
+            statusEl.textContent =
+                "❌ Please write a short feedback message.";
+            statusEl.style.color = "#c03939";
+        }
+        return;
+
+    }
+
+    try {
+
+        const response = await fetch("/api/feedback", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrfToken()
+            },
+            body: JSON.stringify({
+                rating: feedbackRating,
+                message: text
+            })
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(
+                data.message || "Could not save your feedback."
+            );
+        }
+
+        if (statusEl) {
+            statusEl.textContent = "✓ " + data.message;
+            statusEl.style.color = "#16804d";
+        }
+
+        setTimeout(closeFeedbackModal, 1500);
+        loadMyFeedback();
+
+    } catch (error) {
+
+        if (statusEl) {
+            statusEl.textContent = "❌ " + error.message;
+            statusEl.style.color = "#c03939";
+        }
+
+    }
+}
+
+
+window.openFeedbackModal =
+    openFeedbackModal;
+
+window.closeFeedbackModal =
+    closeFeedbackModal;
+
+window.submitFeedback =
+    submitFeedback;
+
+
+function loadMyFeedback() {
+
+    const box = document.getElementById("myFeedback");
+    if (!box) return;
+
+    box.innerHTML =
+        '<div class="pro-loading">Loading your feedback...</div>';
+
+    fetch("/api/my-feedback", { cache: "no-store" })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+
+            if (!data.success || !data.feedback ||
+                data.feedback.length === 0) {
+
+                box.innerHTML =
+                    '<div class="pro-empty">No feedback yet. ' +
+                    'Use "Send Feedback" to share your thoughts.</div>';
+                return;
+
+            }
+
+            box.innerHTML = data.feedback.map(function (f) {
+
+                const stars = "★".repeat(f.rating) +
+                              "☆".repeat(5 - f.rating);
+
+                return `
+                    <div class="pro-msg">
+                        <div class="pro-msg-head">
+                            <b>${escapeHtml(f.message)}</b>
+                            <span class="pro-msg-date">${f.created_at}</span>
+                        </div>
+                        <div style="font-size:16px;margin-top:4px;">${stars}</div>
+                    </div>`;
+
+            }).join("");
+
+        })
+        .catch(function () {
+
+            box.innerHTML =
+                '<div class="pro-empty">Could not load your feedback.</div>';
+
+        });
+}
+
+
+window.loadMyFeedback =
+    loadMyFeedback;
 
 
 function loadMyProfessionalMessages() {
