@@ -81,10 +81,18 @@ ADMIN_TOKEN = os.environ.get("MINDWATCH_ADMIN_TOKEN", "")
 # sends it straight to the feedback inbox instead of the dashboard.
 ADMIN_EMAIL = (os.environ.get("MINDWATCH_ADMIN_EMAIL") or "").strip().lower()
 
+# Standalone developer-portal login (kept separate from normal users).
+DEV_LOGIN = (os.environ.get("MINDWATCH_ADMIN_LOGIN") or "").strip()
+DEV_PASSWORD = os.environ.get("MINDWATCH_ADMIN_PASSWORD") or ""
+
 
 def is_admin_user():
     email = (session.get("user_email") or "").strip().lower()
     return bool(ADMIN_EMAIL) and email == ADMIN_EMAIL
+
+
+def is_dev_portal():
+    return bool(session.get("dev_mode"))
 
 # Secure session cookie settings
 app.config.update(
@@ -154,7 +162,7 @@ REMINDER_MESSAGE = (
 # =========================
 # State-changing requests must include a matching X-CSRFToken header.
 # Login / signup / logout are exempt (they are the entry/exit points).
-CSRF_EXEMPT = {"/login", "/signup", "/logout"}
+CSRF_EXEMPT = {"/login", "/signup", "/logout", "/dev/login"}
 
 
 def get_csrf_token():
@@ -1897,6 +1905,28 @@ LIMIT 20
 # =========================
 # DEVELOPER FEEDBACK INBOX
 # =========================
+@app.route("/dev/login", methods=["GET", "POST"])
+def dev_login():
+
+    error = None
+
+    if request.method == "POST":
+
+        username = (request.form.get("username") or "").strip()
+        password = request.form.get("password") or ""
+
+        if (
+            DEV_LOGIN and username == DEV_LOGIN and
+            DEV_PASSWORD and password == DEV_PASSWORD
+        ):
+            session["dev_mode"] = True
+            return redirect(url_for("feedback_inbox_page"))
+
+        error = "Incorrect developer username or password."
+
+    return render_template("dev_login.html", error=error)
+
+
 @app.route("/feedback-inbox")
 def feedback_inbox_page():
     return render_template("feedback_inbox.html")
@@ -1906,7 +1936,7 @@ def feedback_inbox_page():
 def all_feedback():
 
     header_token = request.headers.get("X-Admin-Token", "")
-    session_ok = is_admin_user()
+    session_ok = is_admin_user() or is_dev_portal()
     token_ok = bool(ADMIN_TOKEN) and header_token == ADMIN_TOKEN
 
     if not (session_ok or token_ok):
