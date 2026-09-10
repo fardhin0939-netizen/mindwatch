@@ -26,3 +26,7 @@ stderr.log
 stdout.log
 f.pdf
 .pytest_cache/
+
+
+# SQLite database
+*.db

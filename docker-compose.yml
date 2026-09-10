@@ -1,31 +1,14 @@
 services:
-  db:
-    image: mysql:8
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: mindwatch_db
-    ports:
-      - "3306:3306"
-    volumes:
-      - db_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootpassword"]
-      interval: 5s
-      retries: 10
-
   web:
     build: .
     ports:
       - "5000:5000"
     environment:
-      MINDWATCH_DB_HOST: db
-      MINDWATCH_DB_USER: root
-      MINDWATCH_DB_PASSWORD: rootpassword
-      MINDWATCH_DB_NAME: mindwatch_db
       MINDWATCH_SECRET_KEY: change-me-in-production
-    depends_on:
-      db:
-        condition: service_healthy
+      MINDWATCH_DB_FILE: /app/data/mindwatch.db
+    volumes:
+      - mindwatch_data:/app/data
+    command: gunicorn -b 0.0.0.0:5000 app:app
 
 volumes:
-  db_data:
+  mindwatch_data:
