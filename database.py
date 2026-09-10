@@ -1,8 +1,7 @@
 import os
 import sqlite3
-from datetime import datetime
-
-import os
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -16,11 +15,19 @@ def _db_path():
     return os.path.abspath(path)
 
 
-def _mysql_date_format(value, fmt):
-    """Minimal emulation of MySQL's DATE_FORMAT() for the formats used.
+def _display_tz():
+    """Resolve the timezone used for displayed timestamps."""
+    try:
+        return ZoneInfo(os.environ.get("MINDWATCH_TZ", "Asia/Kolkata"))
+    except Exception:
+        return None
 
-    The app only formats timestamps as '%d %b %Y, %h:%i %p', so this
-    subset is enough to keep the displayed messages unchanged.
+
+def _mysql_date_format(value, fmt):
+    """Format a stored (UTC) timestamp for display.
+
+    Returns e.g. ``10 Sep 2026, 02:05:30 PM`` in the configured local
+    timezone. Times are stored in UTC, so we shift them before display.
     """
 
     if value is None:
@@ -36,14 +43,19 @@ def _mysql_date_format(value, fmt):
     except Exception:
         return value
 
+    tz = _display_tz()
+    if tz is not None and dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc).astimezone(tz)
+
     day = dt.strftime("%d")
     month = dt.strftime("%b")
     year = dt.strftime("%Y")
     hour12 = dt.strftime("%I")
     minute = dt.strftime("%M")
+    second = dt.strftime("%S")
     ampm = "AM" if dt.hour < 12 else "PM"
 
-    return f"{day} {month} {year}, {hour12}:{minute} {ampm}"
+    return f"{day} {month} {year}, {hour12}:{minute}:{second} {ampm}"
 
 
 class _SQLiteCursor(sqlite3.Cursor):

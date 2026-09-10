@@ -528,7 +528,7 @@ SELECT
     wellness_score,
     risk_level,
     risk_breakdown,
-    DATE_FORMAT(created_at, '%d %b %Y, %h:%i %p') AS created_at
+    DATE_FORMAT(created_at, '%d %b %Y, %I:%M:%S %p') AS created_at
 FROM assessments
 WHERE user_id = %s
 ORDER BY assessments.created_at DESC
@@ -1297,7 +1297,7 @@ SELECT
     text_changes,
     peak_words,
     monitoring_risk,
-    DATE_FORMAT(collected_at, '%d %b %Y, %h:%i %p') AS collected_at
+    DATE_FORMAT(collected_at, '%d %b %Y, %I:%M:%S %p') AS collected_at
 FROM usage_logs
 WHERE user_id = %s
 ORDER BY collected_at DESC
