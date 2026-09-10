@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindWatch AI - Signup</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}">
+  <script>try{var _t=localStorage.getItem('mw-theme');if(_t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
+</head>
+
+<body class="auth">
+
+    <div class="auth-card">
+
+        <div class="brand">
+            <div class="brand-logo">
+                <svg viewBox="0 0 24 24" width="26" height="26" fill="none"
+                     stroke="white" stroke-width="2.2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 12h4l2-6 4 12 2-6h6" />
+                </svg>
+            </div>
+            <div>
+                <h1>MindWatch</h1>
+                <p>AI Mental Health Monitoring</p>
+            </div>
+        </div>
+
+        <h2>Create your account</h2>
+        <p class="sub">Join MindWatch to start monitoring your wellbeing.</p>
+
+        <form method="POST" action="/signup" id="signupForm">
+
+            <label for="name">Full Name</label>
+            <input type="text" id="name" name="name"
+                   placeholder="Jane Doe" required>
+
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email"
+                   placeholder="you@example.com" required>
+
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password"
+                   placeholder="Create a password" required>
+
+            <button type="submit" class="btn-primary">Create Account</button>
+
+        </form>
+
+        <div class="alt">
+            Already have an account?
+            <a href="/login">Sign in</a>
+        </div>
+
+        <p class="demo-note">Demo mode &middot; no real data leaves your session.</p>
+
+    </div>
+
+    <script>
+    (function () {
+        var form = document.getElementById("signupForm");
+        if (!form) return;
+
+        form.addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            var data = new URLSearchParams(new FormData(form));
+
+            fetch("/signup", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: data
+            })
+            .then(function (res) { return res.json(); })
+            .then(function (result) {
+                var card = document.querySelector(".auth-card");
+                if (result.success) {
+                    card.innerHTML =
+                        '<div class="brand">' +
+                            '<div class="brand-logo">' +
+                                '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-6 4 12 2-6h6" /></svg>' +
+                            '</div>' +
+                            '<div><h1>MindWatch</h1>' +
+                            '<p>AI Mental Health Monitoring</p></div>' +
+                        '</div>' +
+                        '<div class="success-box">' +
+                            '<div class="success-icon">&#10003;</div>' +
+                            '<h2>Account created</h2>' +
+                            '<p>' + result.message + '</p>' +
+                            '<a href="/login" class="btn-primary">Sign in</a>' +
+                        '</div>';
+                } else {
+                    var note = document.createElement("p");
+                    note.className = "error-note";
+                    note.textContent = result.message;
+                    form.parentNode.insertBefore(note, form);
+                }
+            })
+            .catch(function () {
+                alert("Something went wrong. Please try again.");
+            });
+        });
+    })();
+    </script>
+
+</body>
+</html>

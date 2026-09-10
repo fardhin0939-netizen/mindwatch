@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MindWatch AI | Mental Health Monitoring</title>
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <script>try{var _t=localStorage.getItem('mw-theme');if(_t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
+  <script>window.__latestAssessment = {{ assessment|tojson|safe }};</script>
+  <script>window.APP_VAPID_PUBLIC_KEY = {{ vapid_public_key|tojson }};</script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=202609100017">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body><aside class="sidebar">
+    <div class="brand"><div class="brand-icon">M</div>
+      <div><strong>Mind Watch</strong><span>Mental Health Monitor</span></div>
+    </div>
+
+    <nav class="sidebar-nav">
+
+    <button class="nav-item active" data-page="dashboard" type="button"><span>Dashboard</span>
+    </button>
+
+    <button class="nav-item" data-page="data" type="button"><span>Data Collection</span>
+    </button>
+
+    <button class="nav-item" data-page="alerts" type="button"><span>Alerts &amp; Reminders</span>
+    </button>
+
+    <button class="nav-item" data-page="reports" type="button"><span>Reports &amp; Insights</span>
+    </button>
+
+    <button class="nav-item" data-page="support" type="button"><span>Care &amp; Support</span>
+    </button>
+
+    <button class="nav-item" data-page="history" type="button"><span>Assessment History</span>
+    </button>
+
+    <button class="nav-item logout-item" type="button" id="logoutBtn"><span>Logout</span>
+    </button>
+
+    </nav>
+    <div class="sidebar-bottom"><div class="privacy"><b>Privacy First</b><br><small>Your demo data stays in this browser.</small></div>
+      <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle dark mode"><span class="theme-toggle-track"><i class="ico-sun">☀</i><i class="ico-moon">☾</i><span class="theme-toggle-thumb"></span></span><span class="theme-toggle-label">Dark mode</span></button>
+      <button id="resetBtn" class="outline-btn" type="button">Reset Demo Data</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div><p class="eyebrow" id="pageEyebrow">AI FOR MENTAL HEALTH MONITORING</p>
+        <h1 id="pageTitle">Welcome to MindWatch</h1>
+        <p class="muted" id="pageSubtitle">
+  AI-based continuous monitoring of consented mental-health indicators.
+</p>
+      </div>
+      <div class="profile"><div class="avatar">{{ user_name[0] }}</div>
+        <div><b>{{ user_name }}</b><span>Account</span></div>
+      </div>
+    </header>
+
+    <!-- DASHBOARD -->
+    <section id="dashboard" class="page active-page">
+      <div class="hero"><div><span class="pill blue">● System Online</span>
+          <h2>Understand your wellness patterns.</h2>
+          <p>Combine questionnaire, text, activity and wearable-style inputs to generate an educational risk indicator.</p>
+<button
+    type="button"
+    class="primary"
+    id="startAssessmentBtn"
+    onclick="showPage('data')">Start Assessment
+</button>
+        </div>
+        
+      </div>
+
+      <div class="stats-grid"><div class="stat-card"><span>Current Indicator</span><strong id="riskValue">Low</strong><small id="riskText">No assessment completed</small></div>
+        <div class="stat-card"><span>Wellness Score</span><strong id="wellnessValue">--</strong><small>0–100 educational score</small></div>
+        <div class="stat-card"><span>Data Sources</span><strong id="sourceValue">0/4</strong><small>Text • Behaviour • Wearable • Chat</small></div>
+        <div class="stat-card"><span>Last Check</span><strong id="lastCheck">--</strong><small>Local demo session</small></div>
+        <div class="stat-card"><span>AI Confidence</span>
+  <strong id="confidenceValue">--%</strong>
+  <small id="confidenceText">Complete assessment</small>
+</div>
+      </div>
+
+
+<div class="grid-2"><div class="notice"><b>Important:</b>
+
+    This prototype provides a research/demo risk indicator,
+    not a medical diagnosis. A qualified mental-health
+    professional should interpret concerning results.
+
+  </div>
+
+</div>
+
+
+<!-- TODAY'S WELLNESS SNAPSHOT -->
+
+<div class="wellness-snapshot"><div class="snapshot-header"><div><p class="eyebrow">TODAY'S OVERVIEW</p>
+
+      <h3>Wellness Snapshot</h3>
+
+      <p class="muted">
+        A quick view of your latest wellness indicators.
+      </p>
+
+    </div>
+
+    <span class="snapshot-badge">● Updated from assessment
+    </span>
+
+  </div>
+
+
+  <div class="snapshot-grid"><div class="snapshot-item"><div><span>Sleep</span>
+        <strong id="snapshotSleep">--</strong>
+      </div>
+    </div>
+
+
+    <div class="snapshot-item"><div><span>Stress</span>
+        <strong id="snapshotStress">--</strong>
+      </div>
+    </div>
+
+
+    <div class="snapshot-item"><div><span>Activity</span>
+        <strong id="snapshotActivity">--</strong>
+      </div>
+    </div>
+
+
+    <div class="snapshot-item"><div><span>Screen Time</span>
+        <strong id="snapshotScreen">--</strong>
+      </div>
+    </div>
+
+  </div>
+
+
+  <div class="snapshot-recommendation"><div class="recommendation-icon"></div>
+
+    <div><strong>Wellness Tip</strong>
+
+      <p id="snapshotRecommendation">
+        Complete an assessment to receive a personalized
+        wellness tip.
+      </p>
+
+    </div>
+
+  </div>
+
+</div>
+<!-- WELLNESS TREND -->
+
+<div class="card wellness-trend-card"><div class="card-head"><div><p class="eyebrow">
+        PROGRESS
+      </p>
+
+      <h3>Wellness Trend
+      </h3>
+
+      <p class="muted">
+        Track changes across your assessments.
+      </p>
+
+    </div>
+
+    <span
+      class="pill"
+      id="trendPill">Tracking
+
+    </span>
+
+  </div>
+
+
+  <div class="trend-grid"><!-- CURRENT -->
+
+    <div class="trend-item"><span class="trend-icon"></span>
+
+      <div><small>
+          Current Score
+        </small>
+
+        <strong id="currentTrendScore">--
+        </strong>
+
+      </div>
+
+    </div>
+
+
+    <!-- PREVIOUS -->
+
+    <div class="trend-item"><span class="trend-icon"></span>
+
+      <div><small>
+          Previous Score
+        </small>
+
+        <strong id="previousTrendScore">--
+        </strong>
+
+      </div>
+
+    </div>
+
+
+    <!-- CHANGE -->
+
+    <div class="trend-item"><span class="trend-icon"></span>
+
+      <div><small>
+          Change
+        </small>
+
+        <strong id="trendChange">--
+        </strong>
+
+      </div>
+
+    </div>
+
+
+    <!-- ASSESSMENTS -->
+
+    <div class="trend-item"><span class="trend-icon"></span>
+
+      <div><small>
+          Assessments
+        </small>
+
+        <strong id="assessmentCount">0
+        </strong>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <div class="trend-message"><span></span>
+
+    <p id="trendMessage">
+
+      Complete more assessments to see your
+      wellness trend over time.
+
+    </p>
+
+  </div>
+
+</div>
+
+<!-- ORIGINAL DASHBOARD CARDS (restored) -->
+<div class="grid-2">
+  <div class="card">
+    <div class="card-head"><div><h3>Monitoring Overview</h3><p>Example indicator trend</p></div><span class="status-dot">Live</span></div>
+    <canvas id="overviewChart" style="max-height:160px"></canvas>
+  </div>
+</div>
+
+</section>
+
+    <!-- DATA COLLECTION -->
+    <section id="data" class="page">
+      <div class="section-title"><div><p class="eyebrow">STEP 01</p><h2>Data Collection</h2><p class="muted">Collect the three input categories represented in your architecture.</p></div></div>
+
+      <div class="grid-3"><div class="input-card"><h3>Text Data</h3><p>Enter a short journal/message sample for the NLP module.</p>
+          <textarea id="journal" placeholder="Example: I have been feeling tired and finding it difficult to concentrate..."></textarea>
+          <button id="nlpBtn" class="outline-btn" type="button">Analyze Journal with NLP
+</button>
+
+<div id="nlpResult" class="notice" style="display:none;"><b>NLP Result:</b>
+  <span id="nlpSentiment"></span><br><b>Text Risk:</b>
+  <span id="nlpRisk"></span>%<br><b>Words:</b>
+  <span id="nlpWords"></span>
+</div>
+
+          <div class="counter"><span>Text sample</span><span id="wordCount">0 words</span></div>
+        </div>
+
+        <div class="input-card"><h3>Wearable Data</h3><p>Demo values representing heart rate, sleep and activity.</p>
+          <label>Average heart rate <output id="hrOut">72</output> BPM</label>
+          <input id="hr" type="range" min="45" max="120" value="72">
+          <div class="hr-advice" id="hrAdvice" data-level="ok">Resting heart rate range for most adults: 60–100 BPM.</div>
+          <label>Sleep duration <output id="sleepOut">7.0</output> hours</label>
+          <input id="sleep" type="range" min="3" max="10" step=".5" value="7">
+          <label>Daily activity <output id="activityOut">60</output> min</label>
+          <input id="activity" type="range" min="0" max="180" value="60">
+        </div>
+
+        <div class="input-card"><h3>Behavioural Data</h3><p>Demo app/usage indicators.</p>
+          <label>Screen time <output id="screenOut">5</output> hours</label>
+          <input id="screen" type="range" min="0" max="14" step=".5" value="5">
+          <label>Social interactions <output id="socialOut">6</output> /day</label>
+          <input id="social" type="range" min="0" max="20" value="6">
+          <label>Stress level</label>
+          <select id="stress">
+            <option value="1">Low</option><option value="2">Mild</option><option value="3" selected>Moderate</option>
+            <option value="4">High</option><option value="5">Very High</option>
+          </select>
+        </div>
+      </div>
+<div class="card chat-card"><div class="card-head"><div><h3>User-Shared Phone Data</h3>
+      <p>
+        Import information that the user voluntarily chooses to share.
+      </p>
+    </div>
+    <span class="pill blue">Consent Based</span>
+  </div>
+
+  <div class="phone-data-grid"><div class="phone-source"><b>Chat / Message Export</b>
+      <span>User can select an exported chat file for NLP analysis.
+      </span>
+
+      <input
+        type="file"
+        id="chatFile"
+        accept=".txt,.csv,.json"
+      >
+
+      <small id="chatFileName">No chat file selected</small>
+    </div>
+
+    <div class="phone-source"><b>App Usage Pattern</b>
+      <span>Real in-browser usage tracking (active/idle time, interactions).
+      </span>
+      <label class="switch-row">
+        <input type="checkbox" id="usageConsent">
+        Enable
+      </label><span class="src-status" id="usageStatus">Not connected</span>
+    </div>
+
+    <div class="phone-source"><b>Selected Notifications</b>
+      <span>Real browser notifications (mindful check-ins) with your permission.
+      </span>
+      <label class="switch-row">
+        <input type="checkbox" id="notificationConsent">
+        Enable
+      </label><span class="src-status" id="notificationStatus">Not connected</span>
+    </div>
+
+    <div class="phone-source"><b>Sleep / Activity</b>
+      <span>Manually sync your real wearable/phone numbers (HR, sleep, steps).
+      </span>
+      <label class="switch-row">
+        <input type="checkbox" id="healthConsent">
+        Enable
+      </label><span class="src-status" id="healthStatus">Not connected</span>
+      <div class="health-sync" id="healthSync" style="display:none;margin-top:10px">
+        <input type="number" id="hrInput" placeholder="Heart rate (bpm)" min="0">
+        <input type="number" id="sleepInput" placeholder="Sleep (hours)" min="0" step="0.1">
+        <input type="number" id="stepsInput" placeholder="Steps" min="0">
+        <button type="button" class="primary" id="saveHealthBtn" style="margin-top:8px">Sync Real Data</button>
+        <small id="healthSyncStatus" style="display:block;margin-top:6px"></small>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="notice"><b>Privacy:</b> Only information voluntarily provided or permitted by
+    the user should be collected. A web page cannot secretly read private
+    messages from other applications.
+  </div>
+</div>
+
+     <div class="card questionnaire"><div class="card-head"><div><h3>Wellness Questionnaire</h3>
+            <p>Use simple self-reported indicators for your prototype.</p>
+        </div>
+    </div>
+
+    <div class="q-explain">
+      <b>Self-reported indicators:</b> you answer 4 short questions about how
+      you have been feeling. Their combined score feeds directly into your
+      Wellness Score, so this is the part of the system that comes straight
+      from you.
+    </div>
+
+    <div class="questions"><label>
+            How often have you felt unusually sad or low?
+            <select class="q" data-weight="2">
+                <option value="0">Not at all</option>
+                <option value="1">Sometimes</option>
+                <option value="2">Often</option>
+                <option value="3">Nearly every day</option>
+            </select>
+        </label>
+
+        <label>
+            How difficult has concentration been?
+            <select class="q" data-weight="1">
+                <option value="0">Not difficult</option>
+                <option value="1">A little</option>
+                <option value="2">Quite difficult</option>
+                <option value="3">Very difficult</option>
+            </select>
+        </label>
+
+        <label>
+            How often have you felt overwhelmed by daily tasks?
+            <select class="q" data-weight="2">
+                <option value="0">Not at all</option>
+                <option value="1">Sometimes</option>
+                <option value="2">Often</option>
+                <option value="3">Nearly every day</option>
+            </select>
+        </label>
+
+        <label>
+            How satisfied are you with your sleep?
+            <select class="q" data-weight="1">
+                <option value="0">Very satisfied</option>
+                <option value="1">Mostly satisfied</option>
+                <option value="2">Not satisfied</option>
+                <option value="3">Very unsatisfied</option>
+            </select>
+        </label>
+
+    </div>
+
+    <div class="q-foot"><span class="dot"></span>
+      These answers combine into your questionnaire score, one of several
+      inputs that make up the overall Wellness Score.
+    </div>
+
+    <!-- REAL AI SCREENING BUTTON -->
+<button
+    type="button"
+    id="analyzeBtn"
+    class="primary large">Run AI Screening Demo →
+</button>
+    </div>
+
+</div>
+      <div class="card privacy-card"><div class="card-head"><div><h3>Privacy & Consent Center</h3>
+      <p>Choose which information you want the system to use.</p>
+    </div>
+
+    <span class="pill green">User Controlled</span>
+  </div>
+
+  <div class="consent-list"><label>
+      <input type="checkbox" id="consentQuestionnaire" checked>
+      <span>Questionnaire</span>
+    </label>
+
+    <label>
+      <input type="checkbox" id="consentText" checked>
+      <span>Journal / Text</span>
+    </label>
+
+    <label>
+      <input type="checkbox" id="consentChat">
+      <span>User-Shared Chat</span>
+    </label>
+
+    <label>
+      <input type="checkbox" id="consentUsage">
+      <span>App Usage Pattern</span>
+    </label>
+
+    <label>
+      <input type="checkbox" id="consentNotifications">
+      <span>Selected Notifications</span>
+    </label>
+
+    <label>
+      <input type="checkbox" id="consentHealth">
+      <span>Sleep / Activity</span>
+    </label>
+
+  </div>
+
+  <div class="notice"><b>Privacy:</b>
+    Data should be collected only with the user's permission.
+    The system provides research/demo indicators and not a medical diagnosis.
+  </div>
+
+  <button id="saveConsentBtn" class="primary">Save Privacy Preferences
+  </button>
+
+  <span id="consentStatus" class="consent-status">Preferences not saved
+  </span>
+
+</div>
+
+    </section>
+
+   <!-- MONITORING -->
+<section id="alerts" class="page">
+
+  <div class="section-title"><div><p class="eyebrow">STEP 03</p>
+      <h2>Risk Alerts &amp; Daily Reminders</h2>
+      <p class="muted">
+        Automatic risk flags with supportive guidance, plus gentle daily
+        check-in reminders.
+      </p>
+    </div>
+  </div>
+
+  <!-- RISK ALERTS -->
+
+  <div class="card"><div class="card-head"><div><h3>Risk Alerts</h3>
+        <p>
+          Based on your latest wellness score. High risk is always paired with
+          support.
+        </p>
+      </div>
+
+      <span id="riskAlertPill" class="pill">● No active alerts</span>
+    </div>
+
+    <div id="riskAlertBody">
+      <div class="muted">Complete an assessment to see your risk status here.</div>
+    </div>
+
+    <div class="monitor-note">
+      Alerts never replace professional care. If you are in crisis, reach out
+      locally right away.
+    </div>
+  </div>
+
+  <!-- DAILY REMINDERS -->
+
+  <div class="card"><div class="card-head"><div><h3>Daily Reminders</h3>
+        <p>
+          Gentle reminders to complete your daily check-in.
+        </p>
+      </div>
+    </div>
+
+    <label class="consent-row">
+      <input type="checkbox" id="remindEnabled">
+
+      <span>Enable daily check-in reminders</span>
+    </label>
+
+    <p class="muted">Reminder time:
+      <input type="time" id="remindTime" value="20:00">
+    </p>
+
+    <div class="scr-actions">
+      <button id="remindEnableBtn" type="button" class="primary">Allowed notifications</button>
+      <button id="remindTestBtn" type="button" class="outline-btn">Send test reminder now</button>
+    </div>
+
+    <div id="remindStatus" class="muted"></div>
+
+    <div id="remindBanner" class="remind-banner" style="display:none;"></div>
+  </div>
+
+</section>
+
+   <!-- REPORTS & INSIGHTS -->
+
+<section id="reports" class="page">
+
+  <div class="section-title"><div><p class="eyebrow">STEP 03</p>
+
+      <h2>Reports & Insights</h2>
+
+      <p class="muted">
+        A simple output screen for users and clinicians.
+      </p>
+
+    </div>
+
+    <button
+      class="outline-btn"
+      type="button"
+      onclick="printWellnessReport()">Print Report
+
+    </button>
+
+  </div>
+
+
+  <!-- PRINTABLE REPORT DOCUMENT -->
+  <!-- TOP RESULT -->
+
+  <div class="grid-2"><!-- WELLNESS SCORE -->
+
+    <div class="card report-main-card" id="reportHero"><div class="card-head"><div><span
+            class="pill"
+            id="reportPill">Indicator
+
+          </span>
+
+          <h3 id="reportTitle">Wellness-risk indicator
+
+          </h3>
+
+          <p
+            id="reportSummary"
+            class="muted">
+
+            Complete an assessment to generate
+            your wellness result.
+
+          </p>
+
+          <span class="risk-badge" id="reportRiskBadge">--</span>
+
+        </div>
+
+      </div>
+
+
+      <div class="report-score-box"><div class="report-score"><span id="reportScore">--
+          </span>
+
+          <small>
+            /100
+          </small>
+
+        </div>
+
+        <p>
+          Educational wellness score
+        </p>
+
+      </div>
+
+
+      <!-- GAUGE -->
+
+      <div class="gauge-container">        <div class="gauge"><div class="gauge-center"><strong id="reportGaugeValue">--
+            </strong>
+
+            <span>/100
+            </span>
+
+          </div>
+
+        </div>
+
+        <p id="gaugeLabel">
+          Complete an assessment
+        </p>
+
+      </div>
+
+    </div>
+
+
+   <!-- WELLNESS OVERVIEW -->
+
+<div class="card"><div class="card-head"><div><p class="eyebrow">
+        WELLNESS OVERVIEW
+      </p>
+
+      <h3>Your Wellness Snapshot
+      </h3>
+
+      <p class="muted">
+        A simple overview based on your latest assessment.
+      </p>
+
+    </div>
+
+    <span class="pill green">AI Assisted
+    </span>
+
+  </div>
+
+
+  <!-- SCORE -->
+
+  <div class="wellness-score-box"><div class="score-circle"><div
+        class="score-number"
+        id="wellnessScore">0
+
+      </div>
+
+      <div class="score-label">/ 100
+      </div>
+
+    </div>
+
+
+    <div class="score-info"><h4 id="wellnessStatus">Ready for Assessment
+      </h4>
+
+      <p id="wellnessMessage">
+
+        Complete an assessment to generate
+        your wellness overview.
+
+      </p>
+
+    </div>
+
+  </div>
+
+
+  <!-- QUICK STATS -->
+
+  <div class="quick-stats"><div class="quick-stat"><div><small>Sleep</small>
+
+        <strong id="sleepScore">--
+        </strong>
+
+      </div>
+
+    </div>
+
+
+    <div class="quick-stat"><div><small>Stress</small>
+
+        <strong id="stressScore">--
+        </strong>
+
+      </div>
+
+    </div>
+
+
+    <div class="quick-stat"><div><small>Activity</small>
+
+        <strong id="activityScore">--
+        </strong>
+
+      </div>
+
+    </div>
+
+
+<div class="quick-stat"><div><small>Screen Time</small>
+
+        <strong id="screenScore">--
+        </strong>
+
+      </div>
+
+    </div>
+
+
+    <div class="quick-stat"><div><small>Heart Rate</small>
+
+        <strong id="heartScore">--
+        </strong>
+
+      </div>
+
+    </div>
+
+
+    </div>
+
+
+  <!-- INSIGHT -->
+
+  <div class="wellness-insight"><div class="insight-icon"></div>
+
+    <div><strong>Wellness Insight
+      </strong>
+
+      <p id="wellnessInsight">
+
+        Your personalized insight will appear
+        after completing an assessment.
+
+      </p>
+
+    </div>
+
+  </div>
+
+
+  <!-- DISCLAIMER -->
+
+  <div class="notice"><b>Important:</b>
+
+    This dashboard provides an educational
+    wellness indicator and is not a medical
+    diagnosis.
+
+  </div>
+
+</div>
+
+
+
+    <div class="card" style="margin-top:18px;">
+      <div class="breakdown-head"><h3>Indicator Breakdown</h3>
+        <span class="breakdown-legend"><i></i>Higher = more risk</span>
+      </div>
+
+      <div id="reportBars"><div class="bar-row"><div class="bar-label"><span>Complete an assessment
+            </span>
+
+            <b>--%</b>
+
+          </div>
+
+          <div class="bar-bg"><div
+              class="bar-fill"
+              style="width:0%;"></div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- RECOMMENDATION -->
+
+  <div class="card recommendation-card"><div class="card-head"><div><p class="eyebrow">
+          PERSONALIZED GUIDANCE
+        </p>
+
+        <h3>Recommendation
+        </h3>
+
+      </div>
+
+    </div>
+
+
+    <div class="recommendation-box"><p id="recommendation">
+
+        Complete an assessment to receive
+        a recommendation.
+
+      </p>
+
+    </div>
+
+  </div>
+
+
+  <!-- SAFETY NOTICE -->
+
+  <div class="notice"><b>Important:</b>
+
+    This prototype provides a research/demo
+    risk indicator, not a medical diagnosis.
+    A qualified mental-health professional
+    should interpret concerning results.
+
+  </div>
+
+
+</section>
+
+    <!-- SUPPORT -->
+<section id="support" class="page">
+
+    <div class="section-title"><div><p class="eyebrow">STEP 04</p>
+            <h2>🤝 Care / Support</h2>
+            <p class="muted">
+                Connect users with appropriate next steps.
+            </p>
+        </div>
+    </div>
+
+
+    <!-- SUPPORT CARDS -->
+    <div class="grid-3"><!-- AI SUPPORT -->
+        <div class="support-card"><h3>🤖 AI Digital Support</h3>
+
+            <p>
+                Provide educational wellness tips, breathing exercises,
+                journaling prompts and self-care resources.
+            </p>
+
+            <button
+    type="button"
+    class="outline-btn"
+    onclick="openAISupportChat()">Open Chatbot
+</button>
+
+        </div>
+<!-- AI SUPPORT CHAT -->
+<div
+    id="aiSupportChat"
+    style="
+        display:none;
+        margin-top:20px;
+        padding:20px;
+        border-radius:16px;
+        background:#ffffff;
+        border:1px solid #e5e9ef;
+        box-shadow:0 8px 25px rgba(0,0,0,0.08);
+    "
+><div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        margin-bottom:15px;
+        "><div><h3 style="margin:0;">MindWatch AI Support
+            </h3>
+
+            <p style="
+                margin:5px 0 0;
+                color:#6b7280;
+            ">
+                Educational wellness support
+            </p>
+        </div>
+
+        <button
+            type="button"
+            class="outline-btn"
+            onclick="closeAISupportChat()">✕ Close
+        </button>
+
+    </div>
+
+
+    <!-- CHAT MESSAGES -->
+
+    <div
+        id="aiChatMessages"
+        style="
+            min-height:220px;
+            max-height:350px;
+            overflow-y:auto;
+            padding:12px;
+            background:#f7f9fc;
+            border-radius:12px;
+            margin-bottom:12px;
+        "
+    ><div style="
+            background:#eaf3ff;
+            padding:12px;
+            border-radius:12px;
+            margin-bottom:10px;
+            max-width:85%;
+        ">Hello! I'm MindWatch AI Support.
+
+            <br><br>You can tell me how you're feeling or ask about
+            stress, sleep, concentration, daily routines,
+            or general wellness.
+        </div>
+
+    </div>
+
+
+    <!-- MESSAGE INPUT -->
+
+    <div style="
+        display:flex;
+        gap:10px;
+    "><input
+            id="aiChatInput"
+            type="text"
+            placeholder="Tell me how you're feeling..."
+            style="
+                flex:1;
+                padding:12px;
+                border:1px solid #d9dee7;
+                border-radius:10px;
+                outline:none;
+            "
+        >
+
+        <button
+            type="button"
+            class="primary"
+            onclick="sendAISupportMessage()">Send
+        </button>
+
+    </div>
+
+</div>
+
+        <!-- PROFESSIONAL SUPPORT -->
+        <div class="support-card"><h3>🩺 Clinician / Therapist</h3>
+
+            <p>
+                For persistent or concerning symptoms,
+                encourage discussion with a qualified professional.
+            </p>
+
+          <button
+    type="button"
+    class="outline-btn"
+    onclick="openClinicianSupport()">🩺 Find a Professional
+</button>
+<div
+    id="clinicianResults"
+    style="
+        display:none;
+        margin-top:18px;
+        text-align:left;
+    "></div>
+        </div>
+
+
+        <!-- PERSONALIZED CARE -->
+        <div class="support-card"><h3>🎯 Personalized Care</h3>
+
+            <p>
+                Generate individualized wellness goals from the
+                monitoring indicators.
+            </p>
+
+            <button
+    type="button"
+    class="outline-btn"
+    id="personalizedCareBtn">View Insights
+</button>
+
+        </div>
+
+        <div class="support-card"><h3>✉️ Message a Professional</h3>
+
+            <p>
+                Message a specific clinic from your results. If it has a
+                public email we send your note straight to that
+                professional; otherwise it's saved to your account so you
+                can follow up by phone or visit.
+            </p>
+
+            <button
+                type="button"
+                class="outline-btn"
+                onclick="openProfessionalMessageModal()">📨 Message Professional
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- MY MESSAGES -->
+    <div class="card" style="margin-top:24px;"><div class="card-head"><div><h3>💬 My Messages to Professionals</h3>
+
+                <p>
+                    Every request you send is saved here so you can track
+                    your conversations and replies.
+                </p>
+            </div>
+        </div>
+
+        <div id="myMessages" class="pro-msg-list">
+            <div class="pro-loading">Loading your messages...</div>
+        </div>
+    </div>
+
+
+    <!-- WELLNESS TIPS -->
+    <div class="card" style="margin-top:24px;"><div class="card-head"><div><h3>🌱 Daily Wellness Tips</h3>
+
+                <p>
+                    Simple habits that may support overall well-being.
+                </p>
+            </div>
+
+        </div>
+
+
+            <div class="grid-3 tips-grid" id="dailyTips"><div><h4>😴 Sleep</h4>
+                <p>
+                    Maintain a regular sleep schedule and aim for
+                    sufficient rest.
+                </p>
+            </div>
+
+            <div><h4>🧘 Stress</h4>
+                <p>
+                    Take short breaks, practice slow breathing,
+                    and make time for relaxing activities.
+                </p>
+            </div>
+
+            <div><h4>🚶 Activity</h4>
+                <p>
+                    Include suitable physical activity and
+                    movement throughout your day.
+                </p>
+            </div>
+
+        </div>
+
+    </div>
+
+<div id="personalizedCareResult"></div>
+    <!-- SAFETY NOTICE -->
+    <div class="notice emergency" style="margin-top:24px;"><b>Safety:</b>
+
+        If someone is in immediate danger or may hurt themselves
+        or someone else, seek urgent local emergency help or contact
+        a qualified professional rather than relying on this application.
+
+    </div>
+
+<!-- AI CHATBOX -->
+
+<div
+    id="aiSupportChat"
+    style="
+        display:none;
+        margin-top:20px;
+        padding:20px;
+        background:white;
+        border:1px solid #ddd;
+        border-radius:16px;
+    "
+><div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        "><div><h3>🤖 MindWatch AI Support</h3>
+
+            <p>
+                Educational wellness support
+            </p>
+        </div>
+
+        <button
+            type="button"
+            class="outline-btn"
+            onclick="closeAISupportChat()">✕ Close
+        </button>
+
+    </div>
+
+
+    <div
+        id="aiChatMessages"
+        style="
+            height:250px;
+            overflow-y:auto;
+            padding:15px;
+            background:#f5f7fa;
+            border-radius:12px;
+            margin:15px 0;
+        "
+    ><div style="
+            background:#e8f2ff;
+            padding:12px;
+            border-radius:10px;
+        ">Hello! I'm MindWatch AI Support.
+
+            <br><br>Tell me how you're feeling or ask me
+            about stress, sleep, concentration,
+            or general wellness.
+
+        </div>
+
+    </div>
+
+
+    <div style="
+        display:flex;
+        gap:10px;
+    "><input
+            id="aiChatInput"
+            type="text"
+            placeholder="Type your message..."
+            style="
+                flex:1;
+                padding:12px;
+                border:1px solid #ccc;
+                border-radius:10px;
+            "
+        >
+
+        <button
+            type="button"
+            class="primary"
+            onclick="sendAISupportMessage()">Send
+        </button>
+
+    </div>
+
+</div>
+<!-- CLINICIAN SUPPORT -->
+
+<div
+    id="clinicianSupport"
+    style="
+        display:none;
+        margin-top:20px;
+        padding:22px;
+        background:white;
+        border:1px solid #e1e5eb;
+        border-radius:16px;
+        box-shadow:0 8px 25px rgba(0,0,0,0.08);
+    "
+><div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:15px;
+        "><div><h3 style="margin:0;">🤝 Mental Health Professionals
+            </h3>
+
+            <p style="
+                margin:6px 0 0;
+                color:#6b7280;
+            ">
+                Find psychiatrists, psychologists, therapists and
+                counselors near any city or your current location.
+            </p>
+        </div>
+
+        <button
+            type="button"
+            class="outline-btn"
+            onclick="closeClinicianSupport()">✕ Close
+        </button>
+
+    </div>
+
+
+    <div style="
+        margin-top:20px;
+        padding:15px;
+        background:#f5f8fc;
+        border-radius:12px;
+    "><h4>🔎 Search by city or area</h4>
+
+        <p>
+            Results are mental-health professionals only —
+            psychiatrists, psychologists, therapists and counselors.
+            No location permission needed.
+        </p>
+
+        <div class="pro-search">
+            <input
+                id="clinicPlaceInput"
+                type="text"
+                placeholder="Enter city / area (e.g. Mysuru, Bengaluru)"
+                onkeydown="if(event.key==='Enter')searchClinicsByPlace()"
+                autocomplete="off"
+            />
+            <button
+                type="button"
+                class="primary"
+                onclick="searchClinicsByPlace()">Search
+            </button>
+        </div>
+
+        <div class="pro-quick" id="clinicQuickCities">
+            <button type="button" onclick="quickCitySearch('Mysuru')">Mysuru</button>
+            <button type="button" onclick="quickCitySearch('Bengaluru')">Bengaluru</button>
+            <button type="button" onclick="quickCitySearch('Delhi')">Delhi</button>
+            <button type="button" onclick="quickCitySearch('Mumbai')">Mumbai</button>
+            <button type="button" onclick="quickCitySearch('Hyderabad')">Hyderabad</button>
+            <button type="button" onclick="quickCitySearch('Chennai')">Chennai</button>
+            <button type="button" onclick="quickCitySearch('Pune')">Pune</button>
+            <button type="button" onclick="quickCitySearch('Kochi')">Kochi</button>
+        </div>
+
+    </div>
+
+    <div style="
+        margin-top:12px;
+        padding:15px;
+        background:#f5f8fc;
+        border-radius:12px;
+    "><h4>📍 Use my current location</h4>
+
+        <p>
+            Optional: let MindWatch use your device location
+            to find professionals near you. This may take a few
+            seconds while your browser finds your position.
+        </p>
+
+        <button
+            type="button"
+            class="outline-btn"
+            onclick="findNearbyProfessionals()">Use My Current Location
+        </button>
+
+    </div>
+
+
+    <div
+        id="professionalResults"
+        style="margin-top:15px;"
+    ></div>
+
+</div>
+</section><!-- ASSESSMENT HISTORY -->
+<section id="history" class="page">
+
+  <div class="section-title"><div><p class="eyebrow">HISTORY</p>
+      <h2>Assessment History</h2>
+      <p class="muted">
+        View your previous mental-health monitoring assessments.
+      </p>
+    </div>
+  </div>
+
+  <div class="card"><div class="card-head"><div><h3>Previous Assessments</h3>
+        <p>Your saved assessment results, newest first.</p>
+      </div>
+      <span class="pill blue" id="historyCount">0 records</span>
+    </div>
+
+    <div class="table-wrap"><table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Wellness Score</th>
+            <th>Risk Level</th>
+            <th>Heart Rate</th>
+            <th>Sleep</th>
+            <th>Stress</th>
+          </tr>
+        </thead>
+
+        <tbody id="assessmentHistoryBody">
+          <tr><td colspan="6" class="history-empty">Loading assessment history...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+</section>
+
+<!-- SUPPORT MESSAGE MODAL -->
+
+<div
+    id="supportMessageModal"
+    style="
+        display:none;
+        position:fixed;
+        inset:0;
+        z-index:9999999;
+        background:rgba(0,0,0,0.55);
+        align-items:center;
+        justify-content:center;
+    "
+><div
+        style="
+            background:white;
+            width:420px;
+            max-width:90%;
+            padding:30px;
+            border-radius:18px;
+            text-align:center;
+            box-shadow:0 20px 60px rgba(0,0,0,.25);
+        "
+    ><div
+            id="supportMessageIcon"
+            style="font-size:40px;"
+        >💬</div>
+
+        <h2 id="supportMessageTitle">Support
+        </h2>
+
+        <p id="supportMessageText">
+            Welcome to MindWatch Support.
+        </p>
+
+        <button
+            type="button"
+            class="primary"
+            onclick="closeSupportMessage()"
+        >Close
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- PROFESSIONAL MESSAGE MODAL -->
+
+<div id="professionalMessageModal" class="modal"><div class="modal-card"><h2>Message a Professional</h2>
+        <p id="proTo" style="margin:0 0 10px;font-weight:600;color:#1f3a5f;"></p>
+
+        <p class="pro-note">
+            When a professional has a public email, your message is sent
+            <b>straight to them by email</b>. Otherwise it's saved to your
+            account (see <b>“My Messages to Professionalsâ€</b> below) and
+            you can reach them by the phone/address shown on their card.
+        </p>
+
+        <label>Subject</label>
+        <input id="proSubject" type="text" placeholder="e.g. Request a session">
+
+        <label>Message</label>
+        <textarea id="proMessage" placeholder="Write your message here..." style="height:110px"></textarea>
+
+        <div class="modal-actions"><button type="button" class="btn outline-btn"
+                    onclick="closeProfessionalMessageModal()">Cancel</button>
+            <button type="button" class="btn primary"
+                    onclick="sendProfessionalMessage()">Send Message</button>
+        </div>
+
+        <p id="proMessageStatus" style="margin:12px 0 0;font-size:13px;min-height:18px;"></p>
+    </div>
+</div>
+
+  <div id="logoutModal" class="modal"><div class="modal-card"><h2>Logout from MindWatch?</h2>
+        <p>Are you sure you want to end your session?</p>
+        <div class="modal-actions"><button type="button" id="cancelLogout" class="btn outline-btn">Cancel</button>
+            <button type="button" id="confirmLogout" class="btn primary">Yes, Logout</button>
+        </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{{ url_for('static', filename='script.js') }}?v=202609100017"></script>
+
+  <div id="reportDocument" class="report-document">
+    <div class="report-header">
+      <h1>MindWatch Wellness Report</h1>
+      <p id="reportDocUser"></p>
+      <p id="reportDocDate"></p>
+    </div>
+
+    <div class="report-summary">
+      <div><span>Wellness Score</span><strong id="reportDocScore">--</strong></div>
+      <div><span>Risk Level</span><strong id="reportDocRisk">--</strong></div>
+    </div>
+
+    <h3>Indicator Breakdown</h3>
+    <div id="reportDocBars"></div>
+
+    <h3>Recommendation</h3>
+    <p id="reportDocRecommendation"></p>
+
+    <p class="report-disclaimer">
+      This report provides an educational wellness indicator and is
+      not a medical diagnosis.
+    </p>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,10 @@
+flask>=3.0
+mysql-connector-python>=8.0
+Werkzeug>=3.0
+python-dotenv>=1.0
+requests>=2.31
+gunicorn>=21.0
+pywebpush>=2.0
+
+# Test dependencies
+pytest>=7.0
