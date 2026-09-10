@@ -1890,12 +1890,6 @@ def feedback_inbox_page():
 @app.route("/api/all-feedback", methods=["GET"])
 def all_feedback():
 
-    if "user_id" not in session:
-        return jsonify({
-            "success": False,
-            "message": "Login required."
-        }), 401
-
     header_token = request.headers.get("X-Admin-Token", "")
 
     if not ADMIN_TOKEN or header_token != ADMIN_TOKEN:
