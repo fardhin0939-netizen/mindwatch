@@ -8,7 +8,7 @@
   <script>try{var _t=localStorage.getItem('mw-theme');if(_t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
   <script>window.__latestAssessment = {{ assessment|tojson|safe }};</script>
   <script>window.APP_VAPID_PUBLIC_KEY = {{ vapid_public_key|tojson }};</script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=202609100021">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=202609100024">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
@@ -373,8 +373,8 @@
         <input type="number" id="stepsInput" placeholder="Steps" min="0">
         <button type="button" class="primary" id="saveHealthBtn" style="margin-top:8px">Sync Real Data</button>
         <small id="healthSyncStatus" style="display:block;margin-top:6px"></small>
-        <button type="button" class="outline-btn" style="margin-top:8px;padding:6px 10px;font-size:12px" id="viewHealthHistory">View health history</button>
       </div>
+      <button type="button" class="outline-btn" style="margin-top:8px;padding:6px 10px;font-size:12px" id="viewHealthHistory">View health history</button>
     </div>
 
   </div>
@@ -553,19 +553,19 @@
     <label class="consent-row">
       <input type="checkbox" id="remindEnabled">
 
-      <span>Enable daily check-in reminders</span>
+      <span>Turn on a daily check-in reminder</span>
     </label>
 
-    <p class="muted">Reminder time:
+    <p class="muted">Remind me every day at:
       <input type="time" id="remindTime" value="20:00">
     </p>
 
     <div class="scr-actions">
-      <button id="remindEnableBtn" type="button" class="primary">Allowed notifications</button>
-      <button id="remindTestBtn" type="button" class="outline-btn">Send test reminder now</button>
+      <button id="remindEnableBtn" type="button" class="primary">Enable browser notifications</button>
+      <button id="remindTestBtn" type="button" class="outline-btn">Send a test reminder</button>
     </div>
 
-    <div id="remindStatus" class="muted"></div>
+    <div id="remindStatus" class="muted">Pick a time and turn reminders on. You will get a gentle daily nudge at that time.</div>
 
     <div id="remindBanner" class="remind-banner" style="display:none;"></div>
   </div>
@@ -1079,22 +1079,6 @@
         </div>
     </div>
 
-    <!-- MY FEEDBACK -->
-    <div class="card" style="margin-top:24px;"><div class="card-head"><div><h3>📝 My Feedback</h3>
-
-                <p>
-                    Everything you've shared with the MindWatch team,
-                    so you can see your suggestions and history.
-                </p>
-            </div>
-        </div>
-
-        <div id="myFeedback" class="pro-msg-list">
-            <div class="pro-loading">Loading your feedback...</div>
-        </div>
-    </div>
-
-
     <!-- WELLNESS TIPS -->
     <div class="card" style="margin-top:24px;"><div class="card-head"><div><h3>🌱 Daily Wellness Tips</h3>
 
@@ -1513,7 +1497,7 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="{{ url_for('static', filename='script.js') }}?v=202609100021"></script>
+<script src="{{ url_for('static', filename='script.js') }}?v=202609100024"></script>
 
   <div id="reportDocument" class="report-document">
     <div class="report-header">

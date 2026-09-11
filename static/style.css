@@ -1999,16 +1999,25 @@
 
 .quick-stat small {
     display: block;
-    color: #7b8794;
-    font-size: 11px;
-    margin-bottom: 3px;
+    color: #66748a;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .4px;
+    margin-bottom: 4px;
+    text-transform: uppercase;
 }
 
 .quick-stat strong {
     display: block;
-    color: #17365d;
-    font-size: 16px;
+    color: #101b34;
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.1;
 }
+
+.quick-stat strong.qs-low { color: #1b8a4b; }
+.quick-stat strong.qs-mod { color: #b7791f; }
+.quick-stat strong.qs-high { color: #c0392b; }
 
 
 /* WELLNESS INSIGHT */
@@ -2792,6 +2801,9 @@ html[data-theme="dark"] #reportDocument{background:#fff;color:#1f2d4d}
 [data-theme="dark"] .phone-source b,
 [data-theme="dark"] .phone-data-item b,
 [data-theme="dark"] .consent-list label span{color:var(--text)}
+[data-theme="dark"] .quick-stat strong.qs-low{color:#3ecf74}
+[data-theme="dark"] .quick-stat strong.qs-mod{color:#f0b458}
+[data-theme="dark"] .quick-stat strong.qs-high{color:#ff6b5e}
 [data-theme="dark"] .snapshot-item,
 [data-theme="dark"] .snapshot-icon,
 [data-theme="dark"] .trend-icon,

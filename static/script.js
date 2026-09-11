@@ -135,7 +135,6 @@ function showPage(pageId) {
     if (pageId === "support") {
         renderDailyTips();
         loadMyProfessionalMessages();
-        loadMyFeedback();
     }
 
     refreshSection(pageId);
@@ -1265,6 +1264,13 @@ window.wellnessScore = score;
 // UPDATE UI
 // ======================================================
 
+function riskClass(val) {
+    val = Number(val) || 0;
+    if (val >= 60) return "qs-high";
+    if (val >= 30) return "qs-mod";
+    return "qs-low";
+}
+
 function updateUI(data) {
 
     if (updateUI._busy) return;
@@ -1537,6 +1543,8 @@ localStorage.setItem(
         sleepScore.textContent =
             Math.round(Number(data.sleepRisk) || 0) + "%";
 
+        sleepScore.className = riskClass(Number(data.sleepRisk) || 0);
+
     }
 
 
@@ -1544,6 +1552,8 @@ localStorage.setItem(
 
         stressScore.textContent =
             Math.round(Number(data.stressRisk) || 0) + "%";
+
+        stressScore.className = riskClass(Number(data.stressRisk) || 0);
 
     }
 
@@ -1553,6 +1563,8 @@ localStorage.setItem(
         activityScore.textContent =
             Math.round(Number(data.activityRisk) || 0) + "%";
 
+        activityScore.className = riskClass(Number(data.activityRisk) || 0);
+
     }
 
 
@@ -1561,6 +1573,8 @@ localStorage.setItem(
         screenScore.textContent =
             Math.round(Number(data.screenRisk) || 0) + "%";
 
+        screenScore.className = riskClass(Number(data.screenRisk) || 0);
+
     }
 
 
@@ -1568,6 +1582,8 @@ localStorage.setItem(
 
         heartScore.textContent =
             Math.round(Number(data.heartRateRisk) || 0) + "%";
+
+        heartScore.className = riskClass(Number(data.heartRateRisk) || 0);
 
     }
 
@@ -2511,6 +2527,7 @@ async function loadLatestAssessment() {
             );
 
         state.score = score;
+        window.__latestAssessment = latest;
 
         const risk =
             latest.risk_level;
@@ -6511,7 +6528,7 @@ document.addEventListener("DOMContentLoaded", function () {
         notifTimer = setInterval(function () {
             showInAppReminder("MindWatch check-in",
                 "How are you feeling right now?");
-        }, 120000);
+        }, 300000 + Math.floor(Math.random() * 300000));
         if (notif) notif.checked = true;
         refreshSources();
     }
@@ -6544,7 +6561,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         });
                     } catch (e) {}
                 }
-            }, 120000);
+}, 300000 + Math.floor(Math.random() * 300000));
             refreshSources();
         }
         if (Notification.permission === "granted") {
@@ -6630,18 +6647,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (chatFile) {
         chatFile.addEventListener("change", function () {
-            const c = (state && state.consent) || {};
-            if (!c.shared_chat) {
-                alert("Consent required: please enable " +
-                      "'Shared chat' in Privacy & Consent first.");
-                this.value = "";
-                if (chatFileName) {
-                    chatFileName.textContent =
-                        "No chat file selected";
-                }
-                if (window.showPage) showPage("dashboard");
-                return;
-            }
             const file = chatFile.files && chatFile.files[0];
             if (!file) return;
             if (chatFileName) {
@@ -6787,14 +6792,6 @@ document.addEventListener("DOMContentLoaded", function () {
     [usage, notif, health].forEach(function (el) {
         if (!el) return;
         el.addEventListener("change", function () {
-            if (this.checked && !consentAllows(this.id)) {
-                this.checked = false;
-                alert("Consent required: please enable this " +
-                      "category in Privacy & Consent first.");
-                if (window.showPage) showPage("dashboard");
-                refreshSources();
-                return;
-            }
             if (this.id === "usageConsent") {
                 this.checked ? startUsage() : stopUsage();
             }
@@ -7603,21 +7600,16 @@ document.addEventListener("DOMContentLoaded", function () {
         const on = !!(enabledEl && enabledEl.checked);
         const t = timeEl ? timeEl.value : "20:00";
         let msg;
-        if (!supportsNotify()) {
-            msg = "This browser does not support notifications, but " +
-                  "reminders still appear inside the app.";
-        } else if (notifyPerm() === "granted") {
-            msg = on
-                ? "Reminders on — a notification pops up daily at " +
-                  formatTime(t) + "."
-                : "Reminders are off. Enable them above to get a daily " +
-                  "prompt at " + formatTime(t) + ".";
+        if (!on) {
+            msg = "Reminders are off. Tick the box above to get a daily " +
+                  "nudge at " + formatTime(t) + ".";
+        } else if (supportsNotify() && notifyPerm() === "granted") {
+            msg = "✓ Reminders on — you'll get a daily nudge at " +
+                  formatTime(t) + ".";
         } else {
-            msg = on
-                ? "Reminders on — allow notifications to also get a " +
-                  "pop-up at " + formatTime(t) + "."
-                : "Reminders are off. Enable them above to get a daily " +
-                  "prompt at " + formatTime(t) + ".";
+            msg = "Reminders on — a daily message appears in the app at " +
+                  formatTime(t) + ". Click 'Enable browser notifications' " +
+                  "to also get a pop-up.";
         }
         statusEl.textContent = msg;
     }
@@ -7681,17 +7673,23 @@ document.addEventListener("DOMContentLoaded", function () {
                     return Promise.resolve(false);
                 }).then(function () {
                     saveSettings();
-                    if (window.__pushReminderActive) {
-                        updateRemindStatus();
-                    }
+                    syncPushSchedule();
+                    updateRemindStatus();
+                    if (bannerEl) { bannerEl.style.display = "none"; }
                 });
             } else {
                 saveSettings();
+                syncPushSchedule();
+                updateRemindStatus();
             }
         });
     }
     if (timeEl) {
-        timeEl.addEventListener("change", saveSettings);
+        timeEl.addEventListener("change", function () {
+            saveSettings();
+            syncPushSchedule();
+            updateRemindStatus();
+        });
     }
     if (enableBtn) {
         enableBtn.addEventListener("click", function () {
@@ -8144,7 +8142,6 @@ async function submitFeedback() {
         }
 
         setTimeout(closeFeedbackModal, 1500);
-        loadMyFeedback();
 
     } catch (error) {
 
@@ -8167,56 +8164,6 @@ window.submitFeedback =
     submitFeedback;
 
 
-function loadMyFeedback() {
-
-    const box = document.getElementById("myFeedback");
-    if (!box) return;
-
-    box.innerHTML =
-        '<div class="pro-loading">Loading your feedback...</div>';
-
-    fetch("/api/my-feedback", { cache: "no-store" })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-
-            if (!data.success || !data.feedback ||
-                data.feedback.length === 0) {
-
-                box.innerHTML =
-                    '<div class="pro-empty">No feedback yet. ' +
-                    'Use "Send Feedback" to share your thoughts.</div>';
-                return;
-
-            }
-
-            box.innerHTML = data.feedback.map(function (f) {
-
-                const stars = "★".repeat(f.rating) +
-                              "☆".repeat(5 - f.rating);
-
-                return `
-                    <div class="pro-msg">
-                        <div class="pro-msg-head">
-                            <b>${escapeHtml(f.message)}</b>
-                            <span class="pro-msg-date">${f.created_at}</span>
-                        </div>
-                        <div style="font-size:16px;margin-top:4px;">${stars}</div>
-                    </div>`;
-
-            }).join("");
-
-        })
-        .catch(function () {
-
-            box.innerHTML =
-                '<div class="pro-empty">Could not load your feedback.</div>';
-
-        });
-}
-
-
-window.loadMyFeedback =
-    loadMyFeedback;
 
 
 function loadMyProfessionalMessages() {
@@ -8523,15 +8470,22 @@ function buildReportHTML(seed) {
 
 // Open a clean window with the report and print it (independent of the
 // main page's print CSS, which was unreliable in some browsers)
-function printWellnessReport() {
+async function printWellnessReport() {
 
     var seed = window.__latestAssessment;
 
     if (!seed || seed.wellness_score === undefined ||
         seed.wellness_score === null) {
-        loadLatestAssessment().catch(function (e) {
+        try {
+            await loadLatestAssessment();
+            seed = window.__latestAssessment;
+        } catch (e) {
             console.error("loadLatest error:", e);
-        });
+        }
+    }
+
+    if (!seed || seed.wellness_score === undefined ||
+        seed.wellness_score === null) {
         alert("No assessment data found yet. Please run an assessment first.");
         return;
     }
