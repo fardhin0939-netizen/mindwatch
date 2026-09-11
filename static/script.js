@@ -947,9 +947,6 @@ async function runAIScreening() {
     const text =
         journal.value.trim();
 
-    const heartRate =
-        Number(hr.value);
-
     const sleepHours =
         Number(sleep.value);
 
@@ -1070,7 +1067,8 @@ async function runAIScreening() {
                 ? 40
                 : 20;
 
-    // Wearable: heart-rate risk (only if the user provided it)
+    // Wearable: heart-rate risk (real value wins over the slider)
+    const heartRate = Number(window.__healthHR) || Number(hr.value) || 0;
     const heartRateRisk =
         heartRate > 0
             ? (heartRate > 100
@@ -1090,6 +1088,19 @@ async function runAIScreening() {
                 : steps < 6000
                     ? 45
                     : steps < 10000
+                        ? 25
+                        : 10)
+            : 0;
+
+    // App-usage idle ratio risk (real browser activity data)
+    const usageIdleRatio = Number(window.__usageIdleRatio) || 0;
+    const usageRisk =
+        usageIdleRatio > 0
+            ? (usageIdleRatio > 0.7
+                ? 65
+                : usageIdleRatio > 0.5
+                    ? 40
+                    : usageIdleRatio > 0.3
                         ? 25
                         : 10)
             : 0;
@@ -1122,6 +1133,11 @@ async function runAIScreening() {
         if (steps > 0) addRisk(4, stepsRisk);
     }
 
+    // Real app-activity data feeds the score too
+    if (usageRisk > 0) {
+        addRisk(6, usageRisk);
+    }
+
     // Behavioural (phone chat export) data is mixed in only when provided
     if (haveBehaviour) {
         addRisk(8, chatRisk);
@@ -1136,8 +1152,9 @@ async function runAIScreening() {
     usedSources.push("Sleep", "Activity", "Screen time", "Stress");
     usedSources.push("Journal text");
     usedSources.push("Social interactions");
-    if (heartRate > 0) usedSources.push("Wearable heart rate");
-    if (steps > 0) usedSources.push("Wearable steps");
+    if (heartRate > 0) usedSources.push("Real heart rate");
+    if (steps > 0) usedSources.push("Real steps");
+    if (usageRisk > 0) usedSources.push("Real app activity");
     if (haveBehaviour) usedSources.push("Chat-export sentiment");
 
 
@@ -1179,6 +1196,7 @@ window.wellnessScore = score;
         socialRisk: socialRisk,
         heartRateRisk: heartRateRisk,
         stepsRisk: stepsRisk,
+        usageRisk: usageRisk,
         chatRisk: chatRisk,
         sources: usedSources
     });
@@ -2693,6 +2711,17 @@ if (reportBars) {
         [
             "Stress input",
             reportStressRisk
+        ],
+
+        [
+            "Real app activity",
+            (function () {
+                var idleRatio = Number(window.__usageIdleRatio) || 0;
+                if (idleRatio <= 0) return 0;
+                return idleRatio > 0.7 ? 65 :
+                       idleRatio > 0.5 ? 40 :
+                       idleRatio > 0.3 ? 25 : 10;
+            })()
         ],
 
         [
@@ -6350,11 +6379,58 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // ---- App Usage: real in-browser telemetry ------------------
     let usageTimer = null;
+    let liveTimer = null;
     let usageActive = 0;
     let usageIdle = 0;
     let usageInteractions = 0;
     let lastActivity = 0;
     let usageOnAct = null;
+    let usagePending = true;
+    window.__usageIdleRatio = 0;
+
+    function flushUsage() {
+        if (!usageActive && !usageIdle) return;
+        const payload = {
+            active_seconds: Math.round(usageActive),
+            idle_seconds: Math.round(usageIdle),
+            interactions: usageInteractions
+        };
+        fetch("/log-usage", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrfToken()
+            },
+            body: JSON.stringify(payload)
+        }).then(function () {
+            loadUsageStats();
+        }).catch(() => {});
+        usageActive = 0;
+        usageIdle = 0;
+        usageInteractions = 0;
+    }
+
+    function sendUsageBeacon() {
+        if (!usageActive && !usageIdle) return;
+        const data = JSON.stringify({
+            active_seconds: Math.round(usageActive),
+            idle_seconds: Math.round(usageIdle),
+            interactions: usageInteractions
+        });
+        if (navigator.sendBeacon) {
+            const blob = new Blob([data], { type: "application/json" });
+            navigator.sendBeacon("/log-usage", blob);
+        }
+    }
+
+    function updateUsageDOM() {
+        var av = document.getElementById("usageActive");
+        var iv = document.getElementById("usageIdle");
+        var us = document.getElementById("usageStats");
+        if (av) av.textContent = formatTime(usageActive);
+        if (iv) iv.textContent = formatTime(usageIdle);
+        if (us) us.style.display = "block";
+    }
 
     function startUsage() {
         if (usageTimer) return;
@@ -6376,31 +6452,31 @@ document.addEventListener("DOMContentLoaded", function () {
                 usageActive += 2;
             }
         }, 2000);
+        liveTimer = setInterval(updateUsageDOM, 3000);
+        setInterval(flushUsage, 30000);
+        if (usagePending) {
+            usagePending = false;
+            loadUsageStats();
+        }
+        if (document.addEventListener) {
+            document.addEventListener("pagehide", sendUsageBeacon);
+            document.addEventListener("visibilitychange", function () {
+                if (document.visibilityState === "hidden") sendUsageBeacon();
+            });
+        }
     }
 
     function stopUsage() {
         if (!usageTimer) return;
         clearInterval(usageTimer);
         usageTimer = null;
+        if (liveTimer) { clearInterval(liveTimer); liveTimer = null; }
         if (usageOnAct) {
             document.removeEventListener("mousemove", usageOnAct);
             document.removeEventListener("keydown", usageOnAct);
             document.removeEventListener("click", usageOnAct);
         }
-        fetch("/log-usage", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": csrfToken()
-            },
-            body: JSON.stringify({
-                active_seconds: Math.round(usageActive),
-                idle_seconds: Math.round(usageIdle),
-                interactions: usageInteractions
-            })
-        }).then(function () {
-            loadUsageStats();
-        }).catch(() => {});
+        flushUsage();
     }
 
     // ---- Notifications: real browser notifications -------------
@@ -6505,6 +6581,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (d && d.success && d.health) {
                     window.__healthSteps =
                         Number(d.health.steps) || 0;
+                    window.__healthHR =
+                        Number(d.health.heart_rate) || 0;
+                    window.__healthSleep =
+                        Number(d.health.sleep_hours) || 0;
                     if (hrInput && d.health.heart_rate != null) {
                         hrInput.value = d.health.heart_rate;
                     }
@@ -6632,6 +6712,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 const a = Number(d.total_active) || 0;
                 const i = Number(d.total_idle) || 0;
                 const s = Number(d.sessions) || 0;
+                const total = a + i;
+                window.__usageIdleRatio = total > 0 ? i / total : 0;
+                window.__usageTotal = total;
                 const av = document.getElementById("usageActive");
                 const iv = document.getElementById("usageIdle");
                 const sv = document.getElementById("usageSessions");
@@ -8252,14 +8335,15 @@ function buildReportHTML(seed) {
     } else {
         srcs.push("Questionnaire", "Sleep", "Activity", "Screen time",
                   "Stress", "Journal text", "Social interactions");
-        if (Number(bd.heartRateRisk) > 0) srcs.push("Wearable heart rate");
-        if (Number(bd.stepsRisk) > 0) srcs.push("Wearable steps");
+        if (Number(bd.heartRateRisk) > 0) srcs.push("Real heart rate");
+        if (Number(bd.stepsRisk) > 0) srcs.push("Real steps");
+        if (Number(bd.usageRisk) > 0) srcs.push("Real app activity");
         if (Number(bd.chatRisk) > 0) srcs.push("Chat-export sentiment");
     }
 
     var allSrcs = ["Questionnaire", "Sleep", "Activity", "Screen time",
                    "Stress", "Journal text", "Social interactions",
-                   "Wearable heart rate", "Wearable steps",
+                   "Real heart rate", "Real steps", "Real app activity",
                    "Chat-export sentiment"];
 
     function chip(name) {
@@ -8305,6 +8389,9 @@ function buildReportHTML(seed) {
     }
     if (Number(bd.stepsRisk) > 0) {
         barsHtml += bar("Steps (wearable)", bd.stepsRisk);
+    }
+    if (Number(bd.usageRisk) > 0) {
+        barsHtml += bar("Real app activity", bd.usageRisk);
     }
     if (Number(bd.chatRisk) > 0) {
         barsHtml += bar("Chat-export sentiment", bd.chatRisk);
