@@ -80,22 +80,33 @@ class _SQLiteCursor(sqlite3.Cursor):
         return row
 
     def fetchone(self):
-        return self._as_dict(sqlite3.Cursor.fetchone(self))
+        row = sqlite3.Cursor.fetchone(self)
+        if row is None:
+            return None
+        if getattr(self, "_dictionary", False):
+            return dict(row)
+        return row
 
     def fetchmany(self, size):
         rows = sqlite3.Cursor.fetchmany(self, size)
-        return [self._as_dict(r) for r in rows]
+        if not getattr(self, "_dictionary", False):
+            return rows
+        return [dict(r) for r in rows]
 
     def fetchall(self):
         rows = sqlite3.Cursor.fetchall(self)
-        return [self._as_dict(r) for r in rows]
+        if not getattr(self, "_dictionary", False):
+            return rows
+        return [dict(r) for r in rows]
 
 
 class _SQLiteConnection(sqlite3.Connection):
     """Connection that returns the ``%s``-compatible cursors."""
 
     def cursor(self, factory=_SQLiteCursor, dictionary=False):
-        return super().cursor(factory=factory)
+        cur = super().cursor(factory=factory)
+        cur._dictionary = bool(dictionary)
+        return cur
 
     def execute(self, sql, parameters=None):
         return self.cursor().execute(sql, parameters)
@@ -280,6 +291,32 @@ def init_db():
     _ensure_assessment_columns(connection)
     _ensure_message_columns(connection)
     _ensure_usage_columns(connection)
+
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS chat_analysis (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INT NOT NULL,
+            file_name VARCHAR(255),
+            word_count INT DEFAULT 0,
+            sentiment VARCHAR(20),
+            risk_score INT DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS mood_checkins (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INT NOT NULL,
+            mood VARCHAR(20) NOT NULL,
+            note TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
 
     connection.commit()
     connection.close()

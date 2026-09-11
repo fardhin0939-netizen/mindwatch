@@ -1650,6 +1650,192 @@ def get_health():
 
 
     # =========================
+# PHONE DATA: HISTORY + CHECK-INS FOR REPORTS
+# =========================
+@app.route("/api/chat-history", methods=["GET"])
+def chat_history():
+
+    if "user_id" not in session:
+        return jsonify({"success": False, "message": "Login required."}), 401
+
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT id, file_name, word_count, sentiment, risk_score,
+                   DATE_FORMAT(created_at, '%d %b %Y, %I:%M:%S %p') AS created_at
+            FROM chat_analysis
+            WHERE user_id = %s
+            ORDER BY created_at DESC
+            LIMIT 50
+            """,
+            (session["user_id"],)
+        )
+        rows = cursor.fetchall()
+        cursor.close()
+        connection.close()
+
+        return jsonify({"success": True, "items": [
+            {
+                "file_name": r["file_name"],
+                "word_count": r["word_count"],
+                "sentiment": r["sentiment"],
+                "risk_score": r["risk_score"],
+                "created_at": r["created_at"]
+            } for r in rows
+        ]})
+
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@app.route("/api/usage-stats", methods=["GET"])
+def usage_stats():
+
+    if "user_id" not in session:
+        return jsonify({"success": False, "message": "Login required."}), 401
+
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT
+                COALESCE(SUM(active_seconds), 0) AS total_active,
+                COALESCE(SUM(idle_seconds), 0) AS total_idle,
+                COALESCE(SUM(interactions), 0) AS total_interactions,
+                COUNT(*) AS sessions
+            FROM usage_logs
+            WHERE user_id = %s
+            """,
+            (session["user_id"],)
+        )
+        row = cursor.fetchone()
+        cursor.execute(
+            """
+            SELECT DATE_FORMAT(collected_at, '%d %b %Y, %I:%M:%S %p') AS collected_at,
+                   active_seconds, idle_seconds, interactions
+            FROM usage_logs
+            WHERE user_id = %s
+            ORDER BY collected_at DESC
+            LIMIT 30
+            """,
+            (session["user_id"],)
+        )
+        rows = cursor.fetchall()
+        cursor.close()
+        connection.close()
+
+        return jsonify({
+            "success": True,
+            "total_active": int(row["total_active"] or 0),
+            "total_idle": int(row["total_idle"] or 0),
+            "total_interactions": int(row["total_interactions"] or 0),
+            "sessions": int(row["sessions"] or 0),
+            "items": rows
+        })
+
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@app.route("/api/mood-checkin", methods=["POST"])
+def mood_checkin():
+
+    if "user_id" not in session:
+        return jsonify({"success": False, "message": "Login required."}), 401
+
+    try:
+        data = request.get_json() or {}
+        mood = str(data.get("mood") or "").strip()
+        note = str(data.get("note") or "").strip()
+
+        valid = {"great", "okay", "anxious", "sad", "stressed"}
+        if mood not in valid:
+            return jsonify({
+                "success": False,
+                "message": "Please pick a valid mood."
+            }), 400
+
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        cursor.execute(
+            "INSERT INTO mood_checkins (user_id, mood, note) "
+            "VALUES (%s, %s, %s)",
+            (session["user_id"], mood, note[:500])
+        )
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+        return jsonify({"success": True,
+                        "message": "Mood check-in saved."})
+
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@app.route("/api/mood-history", methods=["GET"])
+def mood_history():
+
+    if "user_id" not in session:
+        return jsonify({"success": False, "message": "Login required."}), 401
+
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT mood, note,
+                   DATE_FORMAT(created_at, '%d %b %Y, %I:%M:%S %p') AS created_at
+            FROM mood_checkins
+            WHERE user_id = %s
+            ORDER BY created_at DESC
+            LIMIT 50
+            """,
+            (session["user_id"],)
+        )
+        rows = cursor.fetchall()
+        cursor.close()
+        connection.close()
+
+        return jsonify({"success": True, "items": rows})
+
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@app.route("/api/health-history", methods=["GET"])
+def health_history():
+
+    if "user_id" not in session:
+        return jsonify({"success": False, "message": "Login required."}), 401
+
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT heart_rate, sleep_hours, steps,
+                   DATE_FORMAT(logged_at, '%d %b %Y, %I:%M:%S %p') AS logged_at
+            FROM health_logs
+            WHERE user_id = %s
+            ORDER BY logged_at DESC
+            LIMIT 50
+            """,
+            (session["user_id"],)
+        )
+        rows = cursor.fetchall()
+        cursor.close()
+        connection.close()
+
+        return jsonify({"success": True, "items": rows})
+
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+# =========================
 # NLP TEXT ANALYSIS
 # =========================
 @app.route("/analyze-nlp", methods=["POST"])
@@ -1666,8 +1852,33 @@ def analyze_nlp():
         data = request.get_json()
 
         text = data.get("text", "")
+        file_name = data.get("file_name", "")
 
         result = analyze_text_with_llm(text)
+
+        # ---------------
+        # Store the chat analysis so it can be shown in Reports.
+        # ---------------
+        try:
+            connection = get_db_connection()
+            cursor = connection.cursor()
+            cursor.execute(
+                "INSERT INTO chat_analysis "
+                "(user_id, file_name, word_count, sentiment, risk_score) "
+                "VALUES (%s, %s, %s, %s, %s)",
+                (
+                    session["user_id"],
+                    file_name[:255],
+                    int(result.get("word_count") or 0),
+                    str(result.get("sentiment") or "Neutral"),
+                    int(result.get("text_risk") or 0)
+                )
+            )
+            connection.commit()
+            cursor.close()
+            connection.close()
+        except Exception:
+            pass
 
         return jsonify({
             "success": True,

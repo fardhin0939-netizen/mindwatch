@@ -6389,12 +6389,17 @@ document.addEventListener("DOMContentLoaded", function () {
         }
         fetch("/log-usage", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrfToken()
+            },
             body: JSON.stringify({
                 active_seconds: Math.round(usageActive),
                 idle_seconds: Math.round(usageIdle),
                 interactions: usageInteractions
             })
+        }).then(function () {
+            loadUsageStats();
         }).catch(() => {});
     }
 
@@ -6449,17 +6454,21 @@ document.addEventListener("DOMContentLoaded", function () {
                         body: "Check-in notifications are now enabled."
                     });
                 } catch (e) {}
-                if (notifTimer) clearInterval(notifTimer);
-                notifTimer = setInterval(function () {
+            } else {
+                notifMode = "inapp";
+                if (notif) notif.checked = true;
+            }
+            if (notifTimer) clearInterval(notifTimer);
+            notifTimer = setInterval(function () {
+                openCheckinModal();
+                if (notifMode === "real") {
                     try {
                         new Notification("MindWatch check-in", {
                             body: "How are you feeling right now?"
                         });
                     } catch (e) {}
-                }, 120000);
-            } else {
-                startInAppMode();
-            }
+                }
+            }, 120000);
             refreshSources();
         }
         if (Notification.permission === "granted") {
@@ -6567,7 +6576,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         "Content-Type": "application/json",
                         "X-CSRFToken": csrfToken()
                     },
-                    body: JSON.stringify({ text: text })
+                    body: JSON.stringify({ text: text, file_name: file.name })
                 })
                     .then(r => r.json())
                     .then(res => {
@@ -6579,6 +6588,15 @@ document.addEventListener("DOMContentLoaded", function () {
                                 chatFileName.textContent =
                                     file.name + " — analyzed";
                             }
+                            const cr = document.getElementById("chatResult");
+                            if (cr) {
+                                showChatResult(res.sentiment,
+                                    res.text_risk, res.word_count);
+                                cr.style.display = "block";
+                            }
+                        } else {
+                            const cr = document.getElementById("chatResult");
+                            if (cr) cr.style.display = "none";
                         }
                     })
                     .catch(() => {});
@@ -6586,6 +6604,54 @@ document.addEventListener("DOMContentLoaded", function () {
             reader.readAsText(file);
         });
     }
+
+    function showChatResult(sentiment, risk, words) {
+        const se = document.getElementById("chatSentiment");
+        const re = document.getElementById("chatRisk");
+        const we = document.getElementById("chatWords");
+        if (se) {
+            const emoji = { "Positive": "🙂", "Neutral": "😐",
+                            "Negative": "😟" }[sentiment] || "";
+            se.textContent = emoji + " " + sentiment;
+        }
+        if (re) {
+            re.textContent = (Number(risk) || 0) + " / 100";
+            re.style.color = (Number(risk) || 0) >= 70 ? "#c0392b" :
+                             (Number(risk) || 0) >= 40 ? "#b7791f" : "#1e7d4c";
+        }
+        if (we) we.textContent = Number(words) || 0;
+    }
+
+    function loadUsageStats() {
+        fetch("/api/usage-stats", {
+            headers: { "X-CSRFToken": csrfToken() }
+        })
+            .then(r => r.json())
+            .then(d => {
+                if (!d.success) return;
+                const a = Number(d.total_active) || 0;
+                const i = Number(d.total_idle) || 0;
+                const s = Number(d.sessions) || 0;
+                const av = document.getElementById("usageActive");
+                const iv = document.getElementById("usageIdle");
+                const sv = document.getElementById("usageSessions");
+                if (av) av.textContent = formatTime(a);
+                if (iv) iv.textContent = formatTime(i);
+                if (sv) sv.textContent = s;
+                const us = document.getElementById("usageStats");
+                if (us) us.style.display = "block";
+            })
+            .catch(() => {});
+    }
+
+    function formatTime(sec) {
+        sec = Number(sec) || 0;
+        if (sec < 60) return sec + "s";
+        if (sec < 3600) return Math.round(sec / 60) + "m";
+        return (sec / 3600).toFixed(1) + "h";
+    }
+
+    window.loadUsageStats = loadUsageStats;
 
     if (saveHealthBtn) {
         saveHealthBtn.addEventListener("click", function () {
@@ -6608,7 +6674,10 @@ document.addEventListener("DOMContentLoaded", function () {
             }
             fetch("/save-health", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrfToken()
+                },
                 body: JSON.stringify(payload)
             })
                 .then(r => r.json())
@@ -6661,8 +6730,177 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
+    // ---- Modal helpers for check-ins and history viewer ---------
+    function openModal(id) {
+        var m = document.getElementById(id);
+        if (m) m.style.display = "flex";
+    }
+    function closeModal(id) {
+        var m = document.getElementById(id);
+        if (m) {
+            m.style.display = "none";
+            var st = m.querySelector("#checkinStatus");
+            if (st) st.textContent = "";
+        }
+    }
+
+    window.openCheckinModal = function () {
+        var note = document.getElementById("checkinNote");
+        if (note) note.value = "";
+        openModal("checkinModal");
+    };
+    window.closeCheckinModal = function () {
+        closeModal("checkinModal");
+    };
+
+    document.querySelectorAll(".mood-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            var mood = this.getAttribute("data-mood");
+            var note = document.getElementById("checkinNote");
+            var st = document.getElementById("checkinStatus");
+            if (st) {
+                st.textContent = "Saving...";
+                st.style.color = "#5b6b7c";
+            }
+            fetch("/api/mood-checkin", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrfToken()
+                },
+                body: JSON.stringify({
+                    mood: mood,
+                    note: note ? note.value : ""
+                })
+            })
+                .then(r => r.json())
+                .then(d => {
+                    if (st) {
+                        if (d.success) {
+                            st.textContent = "✓ Check-in saved. Thank you!";
+                            st.style.color = "#1e7d4c";
+                            setTimeout(function () {
+                                closeModal("checkinModal");
+                            }, 1200);
+                        } else {
+                            st.textContent = "✗ " + (d.message || "Error.");
+                            st.style.color = "#c0392b";
+                        }
+                    }
+                })
+                .catch(function () {
+                    if (st) {
+                        st.textContent = "✗ Network error.";
+                        st.style.color = "#c0392b";
+                    }
+                });
+        });
+    });
+
+    window.closeHistoryModal = function () {
+        closeModal("historyModal");
+    };
+
+    function openHistory(title, rowsHtml) {
+        document.getElementById("historyTitle").textContent = title;
+        document.getElementById("historyBody").innerHTML = rowsHtml
+            || "<p style='color:#5b6b7c'>No data yet.</p>";
+        openModal("historyModal");
+    }
+
+    function historyChips(items) {
+        if (!items || !items.length) return "";
+        return items.map(function (it) {
+            return "<div style='padding:8px 0;border-bottom:1px solid #eef1f5'>" +
+                   it + "</div>";
+        }).join("");
+    }
+
+    function viewChatHistory() {
+        fetch("/api/chat-history", {
+            headers: { "X-CSRFToken": csrfToken() }
+        })
+            .then(r => r.json())
+            .then(d => {
+                const rows = (d.items || []).map(function (it) {
+                    const risk = Number(it.risk_score) || 0;
+                    const color = risk >= 70 ? "#c0392b" :
+                                  risk >= 40 ? "#b7791f" : "#1e7d4c";
+                    return "<b>" + esc(it.file_name || "Chat") + "</b> " +
+                        "<span style='color:#5b6b7c'>" + esc(it.created_at) +
+                        "</span><br>" + esc(it.sentiment) +
+                        " · <span style='color:" + color +
+                        "'>risk " + risk + "/100</span> · " +
+                        (it.word_count || 0) + " words";
+                });
+                openHistory("Chat analyses", historyChips(rows));
+            })
+            .catch(() => {});
+    }
+
+    function viewUsageHistory() {
+        fetch("/api/usage-stats", {
+            headers: { "X-CSRFToken": csrfToken() }
+        })
+            .then(r => r.json())
+            .then(d => {
+                const rows = (d.items || []).map(function (it) {
+                    return "<b>Active</b> " + formatTime(it.active_seconds)
+                        + " · <b>Idle</b> " + formatTime(it.idle_seconds)
+                        + " · <b>Interactions</b> " +
+                        (it.interactions || 0) + " &nbsp; " +
+                        "<span style='color:#5b6b7c'>" + esc(it.collected_at) + "</span>";
+                });
+                const summary = (d.sessions > 0)
+                    ? "<p style='margin:0 0 8px'>Active: " +
+                      formatTime(d.total_active) +
+                      " · Idle: " + formatTime(d.total_idle) +
+                      " · Sessions: " + d.sessions + "</p>" : "";
+                openHistory("App usage", summary + historyChips(rows));
+            })
+            .catch(() => {});
+    }
+
+    function viewHealthHistory() {
+        fetch("/api/health-history", {
+            headers: { "X-CSRFToken": csrfToken() }
+        })
+            .then(r => r.json())
+            .then(d => {
+                const rows = (d.items || []).map(function (it) {
+                    const parts = [];
+                    if (it.heart_rate != null)
+                        parts.push("♥ " + it.heart_rate + " bpm");
+                    if (it.sleep_hours != null)
+                        parts.push("🛏 " + it.sleep_hours + " h");
+                    if (it.steps != null)
+                        parts.push("👣 " + Number(it.steps).toLocaleString());
+                    return "<div>" + parts.join(" &nbsp;·&nbsp; ") +
+                        " &nbsp; <span style='color:#5b6b7c'>" +
+                        esc(it.logged_at) + "</span></div>";
+                });
+                openHistory("Health history", historyChips(rows));
+            })
+            .catch(() => {});
+    }
+
+    function esc(text) {
+        return String(text == null ? "" : text)
+            .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+    window.esc = esc;
+
+    var vc = document.getElementById("viewChatHistory");
+    if (vc) vc.addEventListener("click", viewChatHistory);
+    var vu = document.getElementById("viewUsageHistory");
+    if (vu) vu.addEventListener("click", viewUsageHistory);
+    var vh = document.getElementById("viewHealthHistory");
+    if (vh) vh.addEventListener("click", viewHealthHistory);
+
     loadConsent();
     loadHealth();
+    loadUsageStats();
     refreshSources();
 
 })();

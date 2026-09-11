@@ -2497,6 +2497,21 @@ input[type=checkbox],input[type=radio]{accent-color:var(--primary);width:16px;he
 .health-sync .primary{grid-column:1/-1}
 @media(max-width:560px){.health-sync{grid-template-columns:1fr}}
 
+/* ---- User-shared phone data results ---- */
+.result-line{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:4px 0;border-bottom:1px dashed #e5eaf2}
+.result-line span{color:var(--muted)}
+.result-line strong{font-weight:700}
+.usage-stats .result-line{padding:3px 0}
+.usage-stats strong{font-size:13px;white-space:nowrap}
+.mood-chip{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;margin:2px}
+
+/* ---- Check-in modal ---- */
+.checkin-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:16px 0}
+.mood-btn{background:#f1f5fa;border:1px solid #d8e0ec;border-radius:12px;padding:14px 8px;font-size:13px;cursor:pointer;transition:.15s;color:#24303e}
+.mood-btn:hover{border-color:var(--primary);background:var(--primary-soft);transform:translateY(-2px)}
+[data-theme="dark"] .mood-btn{background:#1c2739;border-color:#2b3a55;color:#eef3fa}
+[data-theme="dark"] .mood-btn:hover{border-color:var(--primary);color:#fff}
+
 /* ---- Flow / pipeline ---- */
 .flow{display:flex;align-items:stretch;gap:12px;flex-wrap:wrap}
 .flow-step{flex:1;min-width:190px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;box-shadow:var(--shadow-sm);transition:transform .15s,box-shadow .15s}

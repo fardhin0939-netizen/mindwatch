@@ -8,7 +8,7 @@
   <script>try{var _t=localStorage.getItem('mw-theme');if(_t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
   <script>window.__latestAssessment = {{ assessment|tojson|safe }};</script>
   <script>window.APP_VAPID_PUBLIC_KEY = {{ vapid_public_key|tojson }};</script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=202609100019">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=202609100020">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
@@ -327,6 +327,13 @@
       >
 
       <small id="chatFileName">No chat file selected</small>
+
+      <div class="chat-result" id="chatResult" style="display:none;margin-top:10px">
+        <div class="result-line"><span>Sentiment</span><strong id="chatSentiment">--</strong></div>
+        <div class="result-line"><span>Risk score</span><strong id="chatRisk">--</strong></div>
+        <div class="result-line"><span>Word count</span><strong id="chatWords">--</strong></div>
+        <button type="button" class="outline-btn" style="margin-top:8px;padding:6px 10px;font-size:12px" id="viewChatHistory">View all analyses</button>
+      </div>
     </div>
 
     <div class="phone-source"><b>App Usage Pattern</b>
@@ -336,6 +343,12 @@
         <input type="checkbox" id="usageConsent">
         Enable
       </label><span class="src-status" id="usageStatus">Not connected</span>
+      <div class="usage-stats" id="usageStats" style="display:none;margin-top:10px;font-size:13px">
+        <div class="result-line"><span>Total active</span><strong id="usageActive">0s</strong></div>
+        <div class="result-line"><span>Total idle</span><strong id="usageIdle">0s</strong></div>
+        <div class="result-line"><span>Sessions</span><strong id="usageSessions">0</strong></div>
+        <button type="button" class="outline-btn" style="margin-top:8px;padding:6px 10px;font-size:12px" id="viewUsageHistory">View usage history</button>
+      </div>
     </div>
 
     <div class="phone-source"><b>Selected Notifications</b>
@@ -360,6 +373,7 @@
         <input type="number" id="stepsInput" placeholder="Steps" min="0">
         <button type="button" class="primary" id="saveHealthBtn" style="margin-top:8px">Sync Real Data</button>
         <small id="healthSyncStatus" style="display:block;margin-top:6px"></small>
+        <button type="button" class="outline-btn" style="margin-top:8px;padding:6px 10px;font-size:12px" id="viewHealthHistory">View health history</button>
       </div>
     </div>
 
@@ -1472,10 +1486,34 @@
             <button type="button" id="confirmLogout" class="btn primary">Yes, Logout</button>
         </div>
     </div>
+
+<div id="checkinModal" class="modal"><div class="modal-card"><h2>⌛ Mindful Check-in</h2>
+        <p>How are you feeling right now?</p>
+        <div class="checkin-options" id="checkinOptions">
+            <button type="button" class="mood-btn" data-mood="great">😊 Great</button>
+            <button type="button" class="mood-btn" data-mood="okay">🙂 Okay</button>
+            <button type="button" class="mood-btn" data-mood="anxious">😟 Anxious</button>
+            <button type="button" class="mood-btn" data-mood="sad">😔 Sad</button>
+            <button type="button" class="mood-btn" data-mood="stressed">😩 Stressed</button>
+        </div>
+        <label>Optional note</label>
+        <textarea id="checkinNote" placeholder="Anything you'd like to add..." style="height:80px"></textarea>
+        <div class="modal-actions"><button type="button" class="btn outline-btn" onclick="closeCheckinModal()">Dismiss</button>
+        </div>
+        <p id="checkinStatus" style="margin:12px 0 0;font-size:13px;min-height:18px;"></p>
+    </div>
+</div>
+
+<div id="historyModal" class="modal"><div class="modal-card"><h2 id="historyTitle">History</h2>
+        <div id="historyBody" style="max-height:320px;overflow-y:auto;font-size:13px"></div>
+        <div class="modal-actions"><button type="button" class="btn outline-btn" onclick="closeHistoryModal()">Close</button>
+        </div>
+    </div>
+</div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="{{ url_for('static', filename='script.js') }}?v=202609100019"></script>
+<script src="{{ url_for('static', filename='script.js') }}?v=202609100020"></script>
 
   <div id="reportDocument" class="report-document">
     <div class="report-header">
